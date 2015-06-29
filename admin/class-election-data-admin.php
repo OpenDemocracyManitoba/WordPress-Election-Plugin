@@ -2,7 +2,7 @@
 /**
  * The dashboard-specific functionality of the plugin.
  *
- * @link       http://example.com
+ * @link       http://opendemocracymanitoba.ca/
  * @since      1.0.0
  *
  * @package    Election_Data
@@ -99,8 +99,8 @@ class Election_Data_Admin {
 	public function add_plugin_admin_menu() {
 
 		add_menu_page(
-			__( 'Plugin Name', $this->plugin_name ),
-			__( 'Plugin Name', $this->plugin_name ),
+			__( 'Election Data', $this->plugin_name ),
+			__( 'Election Data', $this->plugin_name ),
 			'manage_options',
 			$this->plugin_name,
 			array( $this, 'display_plugin_admin_page' )

@@ -2,7 +2,7 @@
 /**
  * Provide a meta box view for the settings page
  *
- * @link       http://example.com
+ * @link       http://opendemocracymanitoba.ca/
  * @since      1.0.0
  *
  * @package    Election_Data

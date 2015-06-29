@@ -2,7 +2,7 @@
 /**
  *
  *
- * @link       http://example.com
+ * @link       http://opendemocracymanitoba.ca/
  * @since      1.0.0
  *
  * @package    Election_Data
@@ -34,7 +34,6 @@ class Election_Data_Option {
 			return $default;
 		}
 
-		// @TODO: change plugin_name_settings
 		$plugin_options = get_option( 'election_data_settings', array() );
 
 		$value = isset( $plugin_options[ $key ] ) ? $plugin_options[ $key ] : $default;

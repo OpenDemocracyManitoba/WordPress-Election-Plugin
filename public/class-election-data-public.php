@@ -3,7 +3,7 @@
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       http://example.com
+ * @link       http://opendemocracymanitoba.ca/
  * @since      1.0.0
  *
  * @package    Election_Data

@@ -122,7 +122,7 @@ class Election_Data_Sanitization_Helper {
 
 			$input[$key] = $this->apply_type_filter( $input, $tab, $key );
 			$input[$key] = $this->apply_general_filter( $input, $key );
-			$this->do_settings_on_key_change_hook( $key, $new_value );
+			$this->do_settings_on_key_change_hook( $key, $value );
 
 		}
 
@@ -152,6 +152,10 @@ class Election_Data_Sanitization_Helper {
 	private function do_settings_on_key_change_hook( $key, $new_value ) {
 
 		$old_plugin_settings = get_option( $this->snake_cased_plugin_name . '_settings' );
+		
+		if ( !array_key_exists($key, $old_plugin_settings) ) {
+			$old_plugin_settings[$key] = null;
+		}
 
 		if ( $old_plugin_settings[$key] !== $new_value ) {
 

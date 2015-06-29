@@ -6,7 +6,7 @@
  * A class definition that includes attributes and functions used across both the
  * public-facing side of the site and the dashboard.
  *
- * @link       http://example.com
+ * @link       http://opendemocracymanitoba.ca/
  * @since      1.0.0
  *
  * @package    Election_Data
