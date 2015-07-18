@@ -88,7 +88,6 @@ class Election_Data_Admin {
 	public function enqueue_scripts() {
 
 		wp_enqueue_script( 'postbox' );
-
 	}
 
 	/**
