@@ -35,7 +35,6 @@ class Election_Data_Candidate {
 	public $taxonomy_meta;
 	
 	function __construct() {
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'Tax-meta-class/Tax-meta-class.php';
 		$this->candidate = array(
 			'name' => 'ed_candidates',
 			'args' => array(
