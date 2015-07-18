@@ -33,8 +33,7 @@ class Election_Data_Activator {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-candidate.php';
 		
 		$candidate = new Election_Data_Candidate();
-		$candidate->create_candidates();
-		$candidate->create_taxonomies();
+		$candidate->initialize();
 		
 		flush_rewrite_rules();
 	}
