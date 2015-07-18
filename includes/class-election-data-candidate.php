@@ -191,7 +191,7 @@ class Election_Data_Candidate {
 			),
 		);
 		
-		$this->taxonomy_meta = array(
+		/*$this->taxonomy_meta = array(
 			'party' => array(
 				'fields' => array(
 					'colour' => array(
