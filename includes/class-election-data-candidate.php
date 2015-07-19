@@ -35,6 +35,7 @@ class Election_Data_Candidate {
 	public $taxonomy_meta;
 	
 	function __construct() {
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'Tax-meta-class/Tax-meta-class.php';
 		$this->candidate = array(
 			'name' => 'ed_candidates',
 			'args' => array(
@@ -192,6 +193,31 @@ class Election_Data_Candidate {
 		
 		$this->taxonomy_meta = array(
 			'party' => array(
+				'id' => $this->taxonomies['party']['name'] . '_meta_box',
+				'title' => 'Party Details',
+				'pages' => array( $this->taxonomies['party']['name'] ),
+				'context' => 'normal',
+				'fields' => array(
+					array(
+						'type' => 'color',
+						'id' => 'party_colour',
+						'std' => '#000000',
+						'desc' => __( 'Select a colour to identify the party.' ),
+						'name' => __ ( 'Party Colour' ),
+					),
+					array(
+						'type' => 'image',
+						'id' => 'party_logo',
+						'desc' => __( 'Select a logo for the party.' ),
+						'name' => __( 'Party Logo' ),
+					),
+				),
+				'local_images' => true,
+			),
+		);
+		
+		/*$this->taxonomy_meta = array(
+			'party' => array(
 				'fields' => array(
 					'colour' => array(
 						'label' => 'Party Colour',
@@ -214,7 +240,7 @@ class Election_Data_Candidate {
 			'constituency' => array(
 				'fields' => array(),
 			),
-		);
+		);*/
 	}
 	
 	// Sets up the custom post type and the taxonomies.
@@ -223,6 +249,11 @@ class Election_Data_Candidate {
 		
 		foreach( $this->taxonomies as $taxonomy ) {
 			register_taxonomy( $taxonomy['name'], $taxonomy['post_type'], $taxonomy['args'] );
+		}
+		
+		foreach ( $this->taxonomy_meta as $meta_config ) {
+			$meta = new Tax_Meta_Class( $meta_config );
+			$meta->Finish();
 		}
 	}
 	
@@ -335,7 +366,6 @@ class Election_Data_Candidate {
 			$columns['taxonomy-' . $taxonomy['name']] = 'taxonomy-' . $taxonomy['name'];
 		}
 		
-		//error_log( print_r( $columns, true ) );
 		return $columns;
 	}
 
@@ -458,7 +488,7 @@ SQL;
 		return $template_path;
 	}
 	
-	function add_party_fields() {
+	/*function add_party_fields() {
 		$fields = $this->taxonomy_meta['party']['fields'];
 		require plugin_dir_path( __FILE__ ) . 'partials/election-data-party-add-meta-display.php';	
 	}
@@ -475,12 +505,12 @@ SQL;
 		}
 		
 		update_option( "taxonomy_$term_id", $term_meta );
-	}
+	}*/
 	
-	function setup_scripts() {
+	function setup_admin_scripts() {
 		global $current_screen;
 		
-		switch( $current_screen->id ) {
+		/*switch( $current_screen->id ) {
 			case 'edit-' . $this->candidate['name']:
 				wp_enqueue_script( 'jquery' );
 				wp_enqueue_script( 'inline-edit-post' );
@@ -491,15 +521,11 @@ SQL;
 				wp_enqueue_script( 'thickbox' );
 				wp_enqueue_script( 'edit-canidiate_party', plugin_dir_url( __FILE__ ) . 'js/edit-candidate_party.js', array( 'jquery', 'media-upload', 'thickbox' ) );
 				break;
-		}
+		}*/
 		
 		if( isset( $_GET['taxonomoy'] ) && $_GET['taxonomy'] == $this->taxonomies['party']['name'] ) {
 			wp_enqueue_styles( 'thickbox' );
 		}
-	}
-	
-	function setup_styles() {
-
 	}
 	
 	function setup_public_scripts() {
@@ -519,10 +545,10 @@ SQL;
 		$loader->add_filter( 'request', $this, 'column_orderby' );
 		$loader->add_filter( 'months_dropdown_results', $this, 'remove_dates' );
 	    $loader->add_action( 'restrict_manage_posts', $this, 'filter_lists' );
-		$loader->add_action( $this->taxonomies['party']['name'] . '_add_form_fields', $this, 'add_party_fields', 10, 2 );
-		$loader->add_action( $this->taxonomies['party']['name'] . '_edit_form_fields', $this, 'edit_party_fields', 10, 2 );
-		$loader->add_action( 'edited_' . $this->taxonomies['party']['name'], $this, 'save_party_custom_meta', 10, 2 );
-		$loader->add_action( 'create' . $this->taxonomies['party']['name'], $this, 'save_party_custom_meta', 10, 2 );
+		//$loader->add_action( $this->taxonomies['party']['name'] . '_add_form_fields', $this, 'add_party_fields', 10, 2 );
+		//$loader->add_action( $this->taxonomies['party']['name'] . '_edit_form_fields', $this, 'edit_party_fields', 10, 2 );
+		//$loader->add_action( 'edited_' . $this->taxonomies['party']['name'], $this, 'save_party_custom_meta', 10, 2 );
+		//$loader->add_action( 'create' . $this->taxonomies['party']['name'], $this, 'save_party_custom_meta', 10, 2 );
 		$loader->add_action( 'admin_enqueue_scripts', $this, 'setup_admin_scripts' );
 		
 		//require plugin_dir_path( __FILE__ ) . 'debug.php';

@@ -1,31 +1,22 @@
 <?php
-/**
- * The template for displaying all single posts and attachments
- *
- * @package WordPress
- * @subpackage Twenty_Fifteen
- * @since Twenty Fifteen 1.0
- */
 
- error_log( print_r ( get_queried_object()->term_id, true ) );
- 
 get_header(); 
+$party_id = get_queried_object()->term_id; 
 $args = array(
 	'post_type' => 'ed_candidates',
 	'tax_query' => array(
 		array(
 			'taxonomy' => 'ed_candidates_party',
-			'terms' => array( get_queried_object()->term_id, ),
+			'terms' => array( $party_id ),
 			'field' => 'term_id',
 		),
 	),
-	'orderby' => 'rand'
+	'orderby' => 'name',
+	'order' => 'ASC',
 );
 
-error_log( print_r( $args, true ) ) ;
 $the_query = new WP_Query($args);
-error_log( print_r( $the_query, true ) );
-
+require_once plugin_dir_path( __FILE__ ) . 'ed_candidates_party.php';
 ?>
 <div id="primary">
     <div id="content" role="main">
