@@ -27,7 +27,7 @@
 
 	<h2 class="nav-tab-wrapper">
 		<?php
-		foreach( $tabs as $tab_slug => $tab_name ) {
+		foreach ( $tabs as $tab_slug => $tab_name ) {
 
 			$tab_url = add_query_arg( array(
 				'settings-updated' => false,

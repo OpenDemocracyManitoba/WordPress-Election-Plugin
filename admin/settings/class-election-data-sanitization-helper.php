@@ -153,7 +153,7 @@ class Election_Data_Sanitization_Helper {
 
 		$old_plugin_settings = get_option( $this->snake_cased_plugin_name . '_settings' );
 		
-		if ( !array_key_exists($key, $old_plugin_settings) ) {
+		if ( !array_key_exists( $key, $old_plugin_settings ) ) {
 			$old_plugin_settings[$key] = null;
 		}
 
@@ -170,8 +170,8 @@ class Election_Data_Sanitization_Helper {
 		$old_plugin_settings = get_option( $this->snake_cased_plugin_name . '_settings' );
 		$changed = false;
 
-		foreach( $new_values as $key => $new_value ) {
-			if ( isset($old_plugin_settings[$key]) && $old_plugin_settings[$key] !== $new_value ) {
+		foreach ( $new_values as $key => $new_value ) {
+			if ( isset( $old_plugin_settings[$key] ) && $old_plugin_settings[$key] !== $new_value ) {
 				$changed = true;
 			}
 		}
@@ -193,7 +193,7 @@ class Election_Data_Sanitization_Helper {
 		$old_plugin_settings = get_option( $this->snake_cased_plugin_name . '_settings' );
 
 		// Remove empty elements
-		$input = array_filter( $input, array( $this, 'not_empty_or_zero') );
+		$input = array_filter( $input, array( $this, 'not_empty_or_zero' ) );
 
 		foreach ( $this->registered_settings[$tab] as $key => $_value ) {
 

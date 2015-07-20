@@ -12,7 +12,7 @@ $args = array(
 	'post_type' => 'ed_candidates',
 	'orderby' => 'rand'
 );
-$the_query = new WP_Query($args);
+$the_query = new WP_Query( $args );
 
 ?>
 <div id="primary">
@@ -26,13 +26,13 @@ $the_query = new WP_Query($args);
 				<div class='politician show_constituency'>
 					<div class='constituency'>
 						<a href="<?php echo $constituency_url; ?>"><?php echo $constituency; ?></a>
-						<?php if( $incumbent_year ) : ?>
+						<?php if ( $incumbent_year ) : ?>
 							<p class='since'>Incumbent since <?php echo $incumbent_year; ?></p>
 						<?php endif ?>
 					</div>
 					<div class='image' style='border-bottom: 8px solid <?php echo $party_colour ?>;'>
 						<img alt='<?php echo $name ?>' src='<?php echo $image_url ?>' />
-						<?php if( $party_leader ) :?>
+						<?php if ( $party_leader ) :?>
 							<p>party leader<p>
 						<?php endif ?>
 					</div>
@@ -44,12 +44,12 @@ $the_query = new WP_Query($args);
 						</p>
 					<?php endif ?>
 					<p class='icons'>
-						<?php foreach( $icon_data as $icon ) : ?>
-							<?php if( $icon['url'] ) : ?>
+						<?php foreach ( $icon_data as $icon ) : ?>
+							<?php if ( $icon['url'] ) : ?>
 								<a href='<?php echo $icon['url']; ?>'>
 							<?php endif ?>
 							<img alt='<?php echo $icon['alt']; ?>' src='<?php echo $icon['src']; ?>' />
-							<?php if( $icon['url'] ): ?>
+							<?php if ( $icon['url'] ): ?>
 								</a>
 							<?php endif ?>
 						<?php endforeach ?>

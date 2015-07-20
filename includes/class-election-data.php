@@ -126,9 +126,9 @@ class Election_Data {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/settings/class-election-data-settings-definition.php';
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/settings/class-election-data-settings.php';
 		
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-movie-review.php';
-		
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-candidate.php';
+		
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-news-article.php';
 
 		$this->loader = new Election_Data_Loader();
 
@@ -176,7 +176,7 @@ class Election_Data {
 		// Built the option page
 		$settings_callback = new Election_Data_Callback_Helper( $this->plugin_name );
 		$settings_sanitization = new Election_Data_Sanitization_Helper( $this->plugin_name );
-		$plugin_settings = new Election_Data_Settings( $this->get_plugin_name(), $settings_callback, $settings_sanitization);
+		$plugin_settings = new Election_Data_Settings( $this->get_plugin_name(), $settings_callback, $settings_sanitization );
 		$this->loader->add_action( 'admin_init' , $plugin_settings, 'register_settings' );
 
 		$plugin_meta_box = new Election_Data_Meta_Box( $this->get_plugin_name() );
@@ -184,6 +184,9 @@ class Election_Data {
 		
 		$candidate = new Election_Data_Candidate();
 		$candidate->admin_init( $this->loader );
+		
+		$news_article = new Election_Data_News_Article();
+		$news_article->admin_init( $this->loader );
 	}
 
 	/**
@@ -202,6 +205,9 @@ class Election_Data {
 		
 		$candidate = new Election_Data_Candidate();
 		$candidate->init( $this->loader );
+		
+		$news_article = new Election_Data_News_Article();
+		$news_article->init( $this->loader );
 	}
 
 	/**

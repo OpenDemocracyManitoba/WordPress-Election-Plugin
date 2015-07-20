@@ -14,7 +14,7 @@
 <fieldset class="inline-edit-col-right">
 <div class="inline-edit-col">
 	<div class="inline-edit-group">
-		<?php switch( $field['type'] ) :
+		<?php switch ( $field['type'] ) :
 			case 'checkbox': ?>
 			
 				<?php break;

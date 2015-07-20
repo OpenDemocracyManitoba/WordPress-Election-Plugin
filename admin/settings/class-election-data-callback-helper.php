@@ -143,9 +143,9 @@ class Election_Data_Callback_Helper {
 
 		$html ='';
 
-		foreach( $args['options'] as $field_key => $option ) {
+		foreach ( $args['options'] as $field_key => $option ) {
 
-			if( isset( $old_values[$field_key] ) ) {
+			if ( isset( $old_values[$field_key] ) ) {
 				$enabled = $option;
 			} else {
 				$enabled = NULL;

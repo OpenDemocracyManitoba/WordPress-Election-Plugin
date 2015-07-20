@@ -1,6 +1,6 @@
 <?php
 /**
- * Provide a meta box view for the new/edit candidate pages
+ * Provide a meta box view for the new/edit custom post pages
  *
  * @link       http://opendemocracymanitoba.ca/
  * @since      1.0.0
@@ -19,18 +19,17 @@
 
 ?>
 <table class="form-table">
-	<?php foreach( $fields as $field ) :
-		$meta = get_post_meta( $candidate->ID, $field['meta_id'], true ); ?>
+	<?php foreach ( $fields as $field ) :
+		$meta = get_post_meta( $post->ID, $field['meta_id'], true ); ?>
 		<tr>
 			<th style='width: 20%'>
 				<label for='<?php echo $field['id']; ?>'><?php echo $field['label']; ?></label>
 			</th>
 			<td>
-				<?php switch( $field['type'] ) :
+				<?php switch ( $field['type'] ) :
 					case 'checkbox':
 					case 'radio': ?>
-						<input type='<?php echo $field['type']; ?>' name='<?php echo $field['id']; ?>' id='<?php echo $field['id']; ?>' value='true' <?php echo ($meta ? 'checked' : ''); ?> size='30' />
-						<?php error_log ( "meta: $meta  " . ($meta ? 'checked' : '' ) ); ?>
+						<input type='<?php echo $field['type']; ?>' name='<?php echo $field['id']; ?>' id='<?php echo $field['id']; ?>' value='true' <?php echo ( $meta ? 'checked' : '' ); ?> size='30' />
 						<br /><?php echo $field['desc'];
 						break;
 					default: ?>

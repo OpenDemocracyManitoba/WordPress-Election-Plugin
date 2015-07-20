@@ -3,7 +3,8 @@
 */
 $candidate_name = 'ed_candidates';
 $party_name = $candidate_name . '_party';
-$constituency_name = $candidate_name . 'constituency';
+$constituency_name = $candidate_name . '_constituency';
+$candidate_query_var = 'constituency';
 
 $image_id = get_post_thumbnail_id( $candidate_id );
 if ( $image_id ) {
@@ -47,9 +48,5 @@ $youtube = get_post_meta( $candidate_id, 'youtube', true );
 $twitter = get_post_meta( $candidate_id, 'twitter', true );
 $incumbent_year = get_post_meta( $candidate_id, 'incumbent_year', true );
 $party_leader = get_post_meta( $candidate_id, 'party_leader', true );
-
-$constituency_terms = get_the_terms( $candidate_id, $candidate_name . '_constituency' )[0];
-$constituency = $constituency_terms->name;
-$constituency_url = get_site_url() . '?constituency=' . $constituency_terms->slug;
-$candidate_url = get_site_url() . '?candidate=' . get_post_field( 'post_name', $candidate_id );
 $incumbent_url = get_site_url() . '/incumbents/';
+$candidate_url = get_site_url() . '?' . $candidate_query_var . '=' . get_post_field( 'post_name', $candidate_id );

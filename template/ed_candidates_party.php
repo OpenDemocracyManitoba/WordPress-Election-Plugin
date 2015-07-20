@@ -4,10 +4,10 @@
 
 $candidate_name = 'ed_candidates';
 $party_name = $candidate_name . '_party';
-$constituency_name = $candidate_name . 'constituency';
+$constituency_name = $candidate_name . '_constituency';
 $party_query_var = 'party';
 
-if( !isset( $party_id ) )
+if ( !isset( $party_id ) )
 {
 	$party_terms = get_the_terms( $candidate_id, $party_name )[0];
 	$party_id = $party_terms->term_id;
@@ -21,7 +21,3 @@ $party = $party_terms->name;
 $party_colour = get_tax_meta( $party_id, 'party_colour' );
 $party_logo = get_tax_meta( $party_id, 'party_logo' );
 $party_url = get_site_url() . '?' . $party_query_var . '=' . $party_terms->slug;
-
-
-error_log( print_r( $party_colour, true ) );\
-error_log( print_r( $party_logo, true ) );

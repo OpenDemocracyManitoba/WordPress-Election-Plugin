@@ -115,7 +115,7 @@ class Election_Data_Settings {
 			add_option( $this->snake_cased_plugin_name . '_settings', array(), '', 'yes' );
 		}
 
-		foreach( $this->registered_settings as $tab => $settings ) {
+		foreach ( $this->registered_settings as $tab => $settings ) {
 
 			// add_settings_section( $id, $title, $callback, $page )
 			add_settings_section(

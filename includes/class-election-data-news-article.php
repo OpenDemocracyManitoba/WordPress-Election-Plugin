@@ -1,7 +1,7 @@
 <?php
 
 /**
- * The file that defines the candidate custom post type.
+ * The file that defines the news articles custom post type.
  *
  *
  * @link       http://opendemocracymanitoba.ca/
@@ -12,7 +12,7 @@
  */
 
 /**
- * The candidate custom post type.
+ * The news articles custom post type.
  *
  *
  * @since      1.0.0
@@ -21,7 +21,7 @@
  * @author     Robert Burton <RobertBurton@gmail.com>
  */
 
-class Election_Data_Candidate {
+class Election_Data_News_Article {
 	// Definition of the custom post type.
 	public $custom_post;
 	
@@ -37,179 +37,100 @@ class Election_Data_Candidate {
 	function __construct() {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'Tax-meta-class/Tax-meta-class.php';
 		$this->custom_post = array(
-			'name' => 'ed_candidates',
+			'name' => 'ed_news_article',
 			'args' => array(
 				'labels' => array(
-					'name' => __( 'Candidates' ),
-					'singular_name' => __( 'Candidate' ),
-					'add_new_item' => __( 'Add New Candidate' ),
-					'edit_item' => __( 'Edit Candidate' ),
-					'new_item' => __( 'New Candidate' ),
-					'view_item' => __( 'View Candidate' ),
-					'search_items' => __( 'Search Candidates' ),
-					'not_found' => __( 'No Candidates found' ),
-					'not_found_in_trash', __( 'No Candidates found in Trash' ),
+					'name' => __( 'News Articles' ),
+					'singular_name' => __( 'News Article' ),
+					'add_new_item' => __( 'Add New News Article' ),
+					'edit_item' => __( 'Edit News Article' ),
+					'new_item' => __( 'New News Article' ),
+					'view_item' => __( 'View News Article' ),
+					'search_items' => __( 'Search News Articles' ),
+					'not_found' => __( 'No News Articles found' ),
+					'not_found_in_trash', __( 'No News Articles found in Trash' ),
 				),
-				'description' => __( 'A candidate for the election.' ),
-				'public' => true,
-				'menu_position' => 5,
-				//'menu_icon' => plugins_url( 'images/candidate.png', dirname( __FILE__ ) ), //TODO: Create a candidate image,
-				'supports' => array( 'title', 'thumbnail' ),
+				'description' => __( 'A News article about a candidate or party in the election.' ),
+				'public' => false,
+				'menu_position' => 6,
+				'show_ui' => true,
+				//'menu_icon' => plugins_url( 'images/NewsArticle.png', dirname( __FILE__ ) ), //TODO: Create a News Article image,
+				'supports' => array( 'title', ),
 				'taxonomies' => array( '' ),
 				'has_archive' => false,
-				'query_var' => __( 'candidate' ),
-				'rewrite' => array( 'slug' => __( 'candidates' ), 'with_front' => false )
+				'query_var' => 'news_article'
 			)
 		);
+		
 		$this->custom_post_meta = array(
-			'id' => 'election_data_candidate_meta_box',
-			'title' => __( 'Candidate Details' ),
+			'id' => 'election_data_news_article_meta_box',
+			'title' => __( 'News Article Details' ),
 			'post_type' => $this->custom_post['name'],
 			'context' => 'normal',
 			'priority' => 'high',
 			'fields' => array(
-				'phone' => array(
-					'label' => 'Phone Number',
-					'meta_id' => 'phone',
-					'desc' => __( "The candidate's phone number." ),
-					'id' => 'candidate_phone',
+				'url' => array(
+					'label' => __( 'URL' ),
+					'meta_id' => 'url',
+					'desc' => __( 'The URL to the news article.' ),
+					'id' => 'new_article_url',
+					'type' => 'url',
+					'std' => '',
+				),
+				'blurb' => array(
+					'label' => __( 'Snippet ' ),
+					'meta_id' => 'blurb',
+					'desc' => __( 'A short snippet of the news article.' ),
+					'id' => 'new_article_blurb',
 					'type' => 'text',
-					'std' => '',
-				),
-				'website' => array(
-					'label' => 'Website',
-					'meta_id' => 'website',
-					'desc' => __( "The candidate's website." ),
-					'id' => 'candidate_website',
-					'type' => 'url',
-					'std' => '',
-				),
-				'email' => array(
-					'label' => 'Email Address',
-					'meta_id' => 'email',
-					'desc' => __( "The candidate's email address." ),
-					'id' => 'candidate_email',
-					'type' => 'email',
-					'std' => '',
-				),
-				'facebook' => array(
-					'label' => 'Facbook Page',
-					'meta_id' => 'facebook',
-					'desc' => __( "The url to the canidate's facebook page." ),
-					'id' => 'candidate_facebook',
-					'type' => 'url',
-					'std' => '',
-				),
-				'youtube' => array(
-					'label' => 'Youtube Channel or Video',
-					'meta_id' => 'youtube',
-					'desc' => __( "A link to the candidate's youtube channel or video" ),
-					'id' => 'candidate_youtube',
-					'type' => 'url',
-					'std' => '',
-				),
-				'twitter' => array(
-					'label' => 'Twitter Feed',
-					'meta_id' => 'twitter',
-					'desc' => __( "A link to the candidate's twitter feed." ),
-					'id' => 'candidate_twitter',
-					'type' => 'url',
-					'std' => '',
-				),
-				'incumbent' => array(
-					'label' => 'Year Previously Elected',
-					'meta_id' => 'incumbent',
-					'desc' => __( 'If the candidate is the incumbent, the year he/she was elected.' ),
-					'id' => 'candidate_incumbent',
-					'type' => 'text',
-					'std' => '',
-				),
-				'party_leader' => array(
-					'label' => 'Party Leader',
-					'meta_id' => 'party_leader',
-					'desc' => __( 'Indicate if the candidate is the party leader.' ),
-					'id' => 'candidate_party_leader',
-					'type' => 'checkbox',
 					'std' => '',
 				),
 			),
-			'admin_column_fields' => array( 'phone' => '', 'email' => '', 'website' => '', 'party_leader' => '' ),
+			'admin_column_fields' => array( 'url' => '' ),
 		);
 
 		$this->taxonomies = array(
-			'party' => array(
-				'name' => $this->custom_post['name'] . '_party',
+			'reference' => array(
+				'name' => $this->custom_post['name'] . '_reference',
 				'post_type' => $this->custom_post['name'],
 				'args' => array(
 					'labels' => array(
-						'name' => _x( 'Parties', 'taxonomy general name' ),
-						'singular_name' => _x( 'Party', 'taxonomy general name' ),
-						'all_items' => __( 'All Parties' ),
-						'edit_item' => __( 'Edit Party' ),
-						'view_item' => __( 'View Party' ),
-						'update_item' => __( 'Update Party' ),
-						'add_new_item' => __( 'Add New Party' ),
-						'new_item_name' => __( 'New Party Name' ),
-						'search_items' => __( 'Search Parties' ),
+						'name' => _x( 'References', 'taxonomy general name' ),
+						'singular_name' => _x( 'Reference', 'taxonomy general name' ),
+						'all_items' => __( 'All References' ),
+						'edit_item' => __( 'Edit References' ),
+						'view_item' => __( 'View References' ),
+						'update_item' => __( 'Update References' ),
+						'add_new_item' => __( 'Add New Reference' ),
+						'new_item_name' => __( 'New Reference' ),
+						'search_items' => __( 'Search References' ),
 						'parent_item' => null,
 						'parent_item_colon' => null,
 					),
-					'public' => true,
+					'public' => true, //TODO Change back to false
 					'show_tagcloud' => false,
 					'show_admin_column' => true,
+					'show_in_quick_edit' => true,
 					//'meta_box_cb' => '',   //TOOD: Try adding Meta Box Call Back
 					'hierarchical' => true,
-					'query_var' => 'party',
-					'rewrite' => array( 'slug' => 'parties', 'with_front' => false )
-				),
-			),
-			'constituency' => array(
-				'name' => $this->custom_post['name'] . '_constituency',
-				'post_type' => $this->custom_post['name'],
-				'args' => array(
-					'labels' => array(
-						'name' => _x( 'Constituencies', 'taxonomy general name' ),
-						'singular_name' => _x( 'Constituency', 'taxonomy general name' ),
-						'all_items' => __( 'All Constituencies' ),
-						'edit_item' => __( 'Edit Constituency' ),
-						'view_item' => __( 'View Constituency' ),
-						'update_item' => __( 'Update Constituency' ),
-						'add_new_item' => __( 'Add New Constituency' ),
-						'new_item_name' => __( 'New Constituency Name' ),
-						'search_items' => __( 'Search Constituencies' ),
-						'parent_item' => null,
-						'parent_item_colon' => null,
-					),
-					'public' => true,
-					'show_tagcloud' => false,
-					'show_admin_column' => true,
-					//'meta_box_cb' => '',   //TOOD: Add Meta Box Call Back
-					'hierarchical' => true,
-					'query_var' => 'constituency',
-					'rewrite' => array( 'slug' => 'constituencies', 'with_front' => false )
+					'query_var' => 'reference',
 				),
 			),
 		);
-		
+
 		$this->taxonomy_meta = array(
-			'party' => array(
-				'id' => $this->taxonomies['party']['name'] . '_meta_box',
-				'title' => 'Party Details',
-				'pages' => array( $this->taxonomies['party']['name'] ),
+			'reference' => array(
+				'id' => $this->taxonomies['reference']['name'] . '_meta_box',
+				'title' => 'Reference Details',
+				'pages' => array( $this->taxonomies['reference']['name'] ),
 				'context' => 'normal',
 				'fields' => array(
 					array(
-						'type' => 'color',
-						'id' => 'party_colour',
-						'std' => '#000000',
-						'desc' => __( 'Select a colour to identify the party.' ),
-						'name' => __( 'Party Colour' ),
-					),
-					array(
-						'type' => 'image',
-						'id' => 'party_logo',
-						'desc' => __( 'Select a logo for the party.' ),
-						'name' => __( 'Party Logo' ),
+						'type' => 'text',
+						'id' => 'reference_post_id',
+						'std' => '',
+						'desc' => __( 'The post id for the reference.' ),
+						'name' => __( 'Reference Id' ),
 					),
 				),
 				'local_images' => true,
@@ -229,19 +150,6 @@ class Election_Data_Candidate {
 			$meta = new Tax_Meta_Class( $meta_config );
 			$meta->Finish();
 		}
-	}
-	
-	// Changes the title text to identify it as the candidate name.
-	function update_title( $label )
-	{
-		global $post_type;
-	
-		if ( is_admin() && $this->custom_post['name'] == $post_type )
-		{
-			return __( 'Enter Candidate Name' );
-		}
-		
-		return $label;
 	}
 	
 	// Initialize the administrative interface.
@@ -301,8 +209,6 @@ class Election_Data_Candidate {
 			$columns[$field] = $this->custom_post_meta['fields'][$field]['label'];
 		}
 		
-		$columns['title'] = 'Candidate Name';
-		unset( $columns['date'] );
 		return $columns;
 	}
 	
@@ -384,24 +290,14 @@ SQL;
 		return $vars;
 	}
 	
-	// Removes the date filter from the admin column.
-	function remove_dates( $vars )
-	{
-		if ( $this->custom_post['name'] == get_post_type() ) {
-			return array();
-		}
-		
-		return $vars;
-	}
-	
-	// Adds filters for the party and constituency.
+	// Adds filters for the taxonomies.
 	function filter_lists() {
 		$screen = get_current_screen();
 		global $wp_query;
 		
 		if ( $this->custom_post['name'] == $screen->post_type ) {
 			foreach ( $this->taxonomies as $taxonomy ) {
-				$query = $taxonomy['args']['query_var'];
+ 				$query = $taxonomy['args']['query_var'];
 				$name = $taxonomy['name'];
 				$selected = '';
 				if ( isset( $wp_query->query[$query] ) ) {
@@ -456,11 +352,13 @@ SQL;
 				break;
 		}
 		
-		if ( $template_file ) {
-			if ( $theme_file = locate_template( array ( $template_file ) ) ) {
+		$plugin_path = plugin_dir_path( dirname( __FILE__ ) ) . "template/$template_file";
+		
+		if ( $template_file && is_file( $plugin_path ) ) {
+			if ( $theme_file = locate_template( array( $template_file ) ) ) {
 				$template_path = $theme_file;
 			} else {
-				$template_path = plugin_dir_path( dirname( __FILE__ ) ) . "template/$template_file";
+				$template_path = $plugin_path;
 			}
 		}
 		
@@ -485,6 +383,101 @@ SQL;
 		wp_enqueue_style( 'ed_' . $this->custom_post['name'] . '_style', plugin_dir_url( __FILE__ ) . 'css/application.css' );
 	}
 	
+	// Update the Reference taxonomy, and return a array of id => reference name.
+	function update_references() {
+		// Get Top level Referenes.
+		$args = array(
+			'fields' => 'all',
+			'hide_empty' => false,
+			'parent' => 0,
+		);
+		$references = get_terms( $this->taxonomies['reference']['name'], $args ); 
+		$parent_references = array( 'Party', 'Candidate' );
+		$parent_ids = array();
+		foreach ( $references as $reference ) {
+			$parent_ids[$reference->name] = $reference->term_id;
+		}
+		
+		// If a required reference is not there, create it.
+		foreach ( $parent_references as $name ) {
+			if ( !isset( $parent_ids[$name] ) ) {
+				$ids = wp_insert_term( $name, $this->taxonomies['reference']['name'], array( 'parent' => 0 ) ); 
+				$parent_ids[$name] = $ids['term_id'];
+			}
+		}
+		
+		// Get the Party references.
+		$args = array(
+			'fields' => 'id=>name',
+			'hide_empty' => false,
+			'parent' => $parent_ids['Party'],
+		);
+		$party_reference_names_by_id = get_terms( $this->taxonomies['reference']['name'], $args );
+		$references_by_party_id = array();
+		foreach ( $party_reference_names_by_id as $id => $name ) {
+			$references_by_party_id[get_tax_meta( $id, 'reference_post_id' )] = $id;
+		}
+		
+		// Get the Parties.
+		$args = array(
+			'fields' => 'id=>name',
+			'hide_empty' => false,
+		);
+		$parties_by_id = get_terms( 'ed_candidates_party', $args );
+		foreach ( $parties_by_id as $id => $name ) {
+			if ( !isset( $references_by_party_id[$id] ) ) {
+				// Add a party reference if it doesn't exist.
+				$ids = wp_insert_term( $name, $this->taxonomies['reference']['name'], array( 'parent' => $parent_ids['Party'] ) );
+				update_tax_meta( $ids['term_id'], 'reference_post_id', $id );
+				$party_reference_names_by_id[$ids['term_id']] = $name;
+				$references_by_party_id[$id] = $ids['term_id'];
+			} elseif ( $party_reference_names_by_id[$references_by_party_id[$id]] != $name ) {
+				// Update a party reference if it exists, but the name has changed.
+				wp_update_term( $references_by_party_id[$id], $this->taxonomies['reference'][
+			'name'], array( 'name' => $name ) );
+				$party_reference_names_by_id[$references_by_party_id[$id]] = $name;
+			}
+		}
+		
+		// Get the candidate references.
+		$args = array(
+			'fields' => 'id=>name',
+			'hide_empty' => false,
+			'parent' => $parent_ids['Candidate'],
+		);
+		$candidate_reference_names_by_id = get_terms( $this->taxonomies['reference']['name'], $args );
+		$references_by_candidate_id = array();
+		foreach ( $candidate_reference_names_by_id as $id => $name ) {
+			$references_by_candidate_id[get_tax_meta( $id, 'reference_post_id' )] = $id;
+		}
+
+		// Get the candidates.
+		$args = array( 
+			'post_type' => 'ed_candidates',
+			'post_status' => 'publish',
+		);
+		
+		$query = new WP_Query( $args );
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			$name = get_the_title();
+			$id = get_the_ID();
+			if ( !isset( $references_by_candidate_id[$id] ) ) {
+				// Add a candidate reference if it doesn't exist.
+				$ids = wp_insert_term( $name, $this->taxonomies['reference']['name'], array( 'parent' => $parent_ids['Candidate'] ) );
+				update_tax_meta( $ids['term_id'], 'reference_post_id', $id );
+				$candidate_reference_names_by_id[$ids['term_id']] = $name;
+				$references_by_candidate_id[$id] = $ids['term_id'];
+			} elseif ( $candidate_reference_names_by_id[$references_by_candidate_id[$id]] != $name ) {
+				// Update a candidate reference if it exists, but the name has changed.
+				wp_update_term( $references_by_candidate_id[$id], $this->taxonomies['reference']['name'], array( name => $name ) );
+				$candidate_reference_names_by_id[$references_by_party_id[$id]] = $name;
+			}
+		}
+		
+		return $candidate_reference_names_by_id + $party_reference_names_by_id;
+	}
+	
 	function admin_init( $loader )
 	{
 		$loader->add_action( 'admin_init', $this, 'admin' );
@@ -496,15 +489,15 @@ SQL;
 		$loader->add_filter( 'manage_edit-' . $this->custom_post['name'] . '_sortable_columns', $this, 'sort_columns' );
 		$loader->add_filter( 'posts_clauses', $this, 'taxonomy_clauses', 10, 2 );
 		$loader->add_filter( 'request', $this, 'column_orderby' );
-		$loader->add_filter( 'months_dropdown_results', $this, 'remove_dates' );
 	    $loader->add_action( 'restrict_manage_posts', $this, 'filter_lists' );
 		$loader->add_action( 'admin_enqueue_scripts', $this, 'setup_admin_scripts' );
+		$loader->add_action( 'admin_footer', $this, 'update_references' );
+		
 	}
 	
 	function init( $loader )
 	{
 		$loader->add_action( 'init', $this, 'initialize' );
-		$loader->add_filter( 'enter_title_here', $this, 'update_title' );
 		$loader->add_filter( 'template_include', $this, 'include_template_function', 1 );
 		$loader->add_filter( 'wp_enqueue_scripts', $this, 'setup_public_scripts' );
 	}	

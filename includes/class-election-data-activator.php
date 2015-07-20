@@ -35,6 +35,11 @@ class Election_Data_Activator {
 		$candidate = new Election_Data_Candidate();
 		$candidate->initialize();
 		
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-news-articles.php';
+		
+		$news_articles = new Election_Data_News_Article();
+		$news_articles->initialize();
+		
 		flush_rewrite_rules();
 	}
 
