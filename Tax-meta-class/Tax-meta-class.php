@@ -528,6 +528,20 @@ class Tax_Meta_Class {
   }
   
   /**
+   * Show Field Text.
+   *
+   * @param string $field 
+   * @param string $meta 
+   * @since 1.0
+   * @access public
+   */
+  public function show_field_url( $field, $meta) {  
+    $this->show_field_begin( $field, $meta );
+    echo "<input type='url' class='at-text' name='{$field['id']}' id='{$field['id']}' value='{$meta}' style='{$field['style']}' size='30' />";
+    $this->show_field_end( $field, $meta );
+  }
+  
+  /**
    * Show Field hidden.
    *
    * @param string $field 
@@ -1196,6 +1210,31 @@ class Tax_Meta_Class {
       return $new_field;
     }
   }
+    
+  /**
+   *  Add URL Field to meta box
+   *  @author Ohad Raz
+   *  @since 1.0
+   *  @access public
+   *  @param $id string  field id, i.e. the meta key
+   *  @param $args mixed|array
+   *    'name' => // field name/label string optional
+   *    'desc' => // field description, string optional
+   *    'std' => // default value, string optional
+   *    'style' =>   // custom style for field, string optional
+   *    'validate_func' => // validate function, string optional
+   *   @param $repeater bool  is this a field inside a repeatr? true|false(default) 
+   */
+  public function addUrl($id,$args,$repeater=false){
+    $new_field = array('type' => 'url','id'=> $id,'std' => '','desc' => '','style' =>'','name' => 'URL Field','multiple' => false);
+    $new_field = array_merge($new_field, $args);
+    if(false === $repeater){
+      $this->_fields[] = $new_field;
+    }else{
+      return $new_field;
+    }
+  }
+
   /**
    *  Add Hidden Field to meta box
    *  @author Ohad Raz
