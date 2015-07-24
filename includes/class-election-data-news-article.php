@@ -619,6 +619,7 @@ SQL;
 	
 	function get_news_feeds( $candidate )
 	{
+		$query = 'http://news.google.ca/news?ned=ca&hl=en&as_drrb=q&as_qdr=a&scoring=r&output=rss&num=75&q=Greg Selinger';
 	}	
 	
 	function admin_init( $loader )

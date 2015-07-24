@@ -5,7 +5,7 @@
 $candidate_name = 'ed_candidates';
 $party_name = $candidate_name . '_party';
 $constituency_name = $candidate_name . '_constituency';
-$constituency_query_var = 'constituency';
+$constituency_perma_link = 'constituencies';
 
 if ( !isset( $constituency_id ) )
 {
@@ -18,4 +18,4 @@ else
 }
 
 $constituency = $constituency_terms->name;
-$constituency_url = get_site_url() . '?' . $constituency_query_var . '=' . $constituency_terms->slug;
+$constituency_url = get_site_url() . '/' . $constituency_perma_link . '/' . $constituency_terms->slug;

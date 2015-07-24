@@ -29,16 +29,9 @@ require_once plugin_dir_path( __FILE__ ) . 'ed_candidates_constituency.php'; ?>
 				<div class='image' style='border-bottom: 8px solid <?php echo $party_colour ?>;'>
 					<img alt='<?php echo $name ?>' src='<?php echo $image_url ?>' />
 					<?php if ( $party_leader ) :?>
-						<p>party leader<p>
+						<p>party leader</p>
 					<?php endif ?>
 				</div>
-				<p class='name'><strong><?php echo $name; ?></strong>
-				<?php if ( $incumbent_year ) : ?>
-					<span class='incumbent_link'>
-						<a href='<?php echo $incumbent_link ?>' title='since <?php echo $incumbent_year ?>'>incumbent</a>
-					</span>
-				<?php endif ?>
-				</p>
 				<?php if ( $website ) : ?>
 					<p class='election_website'>
 						<a href='<?php echo $website ?>'>Election Website</a>

@@ -5,7 +5,7 @@
 $candidate_name = 'ed_candidates';
 $party_name = $candidate_name . '_party';
 $constituency_name = $candidate_name . '_constituency';
-$party_query_var = 'party';
+$party_perma_link = 'parties';
 
 if ( !isset( $party_id ) )
 {
@@ -20,4 +20,4 @@ else
 $party = $party_terms->name;
 $party_colour = get_tax_meta( $party_id, 'party_colour' );
 $party_logo = get_tax_meta( $party_id, 'party_logo' );
-$party_url = get_site_url() . '?' . $party_query_var . '=' . $party_terms->slug;
+$party_url = get_site_url() . '/' . $party_perma_link . '/' . $party_terms->slug;

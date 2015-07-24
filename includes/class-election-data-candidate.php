@@ -124,7 +124,7 @@ class Election_Data_Candidate {
 					'type' => 'url',
 					'std' => '',
 				),
-				'incumbent' => array(
+				'incumbent_year' => array(
 					'label' => 'Year Previously Elected',
 					'meta_id' => 'incumbent',
 					'desc' => __( 'If the candidate is the incumbent, the year he/she was elected.' ),
@@ -169,7 +169,7 @@ class Election_Data_Candidate {
 					'query_var' => 'party',
 					'rewrite' => array( 'slug' => 'parties', 'with_front' => false )
 				),
-				'use_radio_button' => true,
+				'use_radio_button' => false,
 			),
 			'constituency' => array(
 				'name' => $this->custom_post['name'] . '_constituency',
@@ -235,7 +235,7 @@ class Election_Data_Candidate {
 		foreach ( $this->taxonomies as $taxonomy ) {
 			if ( isset( $taxonomy['use_radio_button'] ) && $taxonomy['use_radio_button'] ) {
 				if ( $taxonomy['args']['hierarchical'] ) {
-					$taxonomy['args']['meta_box_cb'] = array( $this, 'taxonomy_radio_meta_box' );
+					$taxonomy['args']['meta_box_cb'] = array( $this, 'taxonomy_category_radio_meta_box' );
 				}
 			}
 			
