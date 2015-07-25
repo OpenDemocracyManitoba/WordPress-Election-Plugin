@@ -9,12 +9,14 @@ $constituency_perma_link = 'constituencies';
 
 if ( !isset( $constituency_id ) )
 {
-	$constituency_terms = get_the_terms( $candidate_id, $constituency_name )[0];
+	$all_terms = get_the_terms( $candidate_id, $constituency_name );
+	$constituency_terms = $all_terms[0];
 	$constituency_id = $constituency_terms->term_id;
 }
 else
 {
-	$constituency_terms = get_terms( $constituency_name, array( 'include' => $constituency_id ) )[0];
+	$all_terms = get_terms( $constituency_name, array( 'include' => $constituency_id ) );
+	$constituency_terms = $all_terms[0];
 }
 
 $constituency = $constituency_terms->name;

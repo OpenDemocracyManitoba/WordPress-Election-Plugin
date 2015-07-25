@@ -37,7 +37,7 @@ foreach ( array('email', 'facebook', 'youtube', 'twitter' ) as $icon_type ) {
 	}
 		
 	$src = plugins_url( 'images/'. $alt . '.jpg', __FILE__ );
-	$icon_data[$icon_type] = array( 'url' => $url, 'src' => $src, 'alt' => $alt );
+	$icon_data[$icon_type] = array( 'url' => $url, 'src' => $src, 'alt' => ucfirst( $alt ) );
 }
 
 $phone = get_post_meta( $candidate_id, 'phone', true );

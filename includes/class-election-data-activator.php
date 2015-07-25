@@ -41,6 +41,8 @@ class Election_Data_Activator {
 		$news_articles->initialize();
 		
 		flush_rewrite_rules();
+		
+		$news_articles->setup_cron();
 	}
 
 }
