@@ -22,7 +22,11 @@ else
 $party_name = $party_terms->name;
 $party_colour = get_tax_meta( $party_id, 'colour' );
 $party_logo = get_tax_meta( $party_id, 'logo' );
-$party_logo_url = $party_logo['url'];
+if ( $party_logo ) {
+	$party_logo_url = $party_logo['url'];
+} else {
+	$party_logo_url = plugins_url( 'images/missing_party.jpg', __FILE__ );
+}
 $party_url = get_site_url() . '/' . $party_perma_link . '/' . $party_terms->slug;
 $party_website = get_tax_meta( $party_id, 'website' );
 $party_phone = get_tax_meta( $party_id, 'phone' );
