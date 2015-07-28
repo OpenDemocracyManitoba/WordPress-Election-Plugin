@@ -816,6 +816,10 @@ SQL;
 		wp_clear_scheduled_hook( 'ed_update_news_articles' );
 	}
 	
+	function change_cron() {
+		
+	}
+	
 	function admin_init( $loader )
 	{
 		//error_log ( print_r(time(), true) );
@@ -839,6 +843,7 @@ SQL;
 			$loader->add_filter( 'enter_title_here', $this, 'update_title' );
 		}
 		$loader->add_action( 'ed_update_news_articles', $this, 'update_news_articles' );
+		$loader->add_action( 'election_data_settings_on_change_time', $this, 'change_cron' );
 	}
 	
 	function init( $loader )

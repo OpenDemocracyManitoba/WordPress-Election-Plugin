@@ -19,7 +19,6 @@
  */
 class Election_Data_Settings_Definition {
 
-	// @TODO: change election-data
 	public static $plugin_name = 'election-data';
 
 	/**
@@ -78,8 +77,8 @@ class Election_Data_Settings_Definition {
 	static public function get_tabs() {
 
 		$tabs                = array();
-		$tabs['default_tab'] = __( 'Default Tab', self::$plugin_name );
-		$tabs['second_tab']  = __( 'Second Tab', self::$plugin_name );
+		$tabs['news_scraping_tab'] = __( 'News Scraping', self::$plugin_name );
+		//$tabs['second_tab']  = __( 'Second Tab', self::$plugin_name );
 
 		return apply_filters( self::get_snake_cased_plugin_name() . '_settings_tabs', $tabs );
 	}
@@ -97,12 +96,33 @@ class Election_Data_Settings_Definition {
 		$settings[] = array();
 
 		$settings = array(
-			'default_tab' => array(
-				'default_tab_settings'       => array(
+			'news_scraping_tab' => array(
+/*				'default_tab_settings'       => array(
 					'name' => '<strong>' . __( 'Header', self::$plugin_name ) . '</strong>',
 					'type' => 'header'
+				),*/
+				'location' => array(
+					'name' => __( 'Location', self::$plugin_name ),
+					'desc' => __( 'The location of the election.', self::$plugin_name ),
+					'type' => 'text'
 				),
-				'missing_callback'           => array(
+				'time' => array(
+					'name' => __( 'Scrape Time', self::$plugin_name ),
+					'desc' => __( 'The time of the initial scrape. ie. 2am CDT', self::$plugin_name ),
+					'type' => 'text',
+					'std' => '2am'
+				),
+				'freqeuency' => array(
+					'name' => __( 'Frequency', self::$plugin_name ),
+					'desc' => __( 'The frequency of the scraping.', self::$plugin_name ),
+					'options' => array(
+						'daily' => __( 'Once every 24 hours', self::$plugin_name ),
+						'twicedaily' => __( 'Once every 12 hours', self::$plugin_name ),
+					),
+					'type' => 'select',
+					'std' => 'daily'
+				),
+				/*'missing_callback'           => array(
 					'name' => '<strong>' . __( 'Missing Callback', self::$plugin_name ) . '</strong>',
 					'type' => 'non-exisit'
 				),
@@ -205,15 +225,15 @@ class Election_Data_Settings_Definition {
 					'name' => __( 'Rich Editor', self::$plugin_name ),
 					'desc' => __( 'Rich Editor save as HTML markups', self::$plugin_name ),
 					'type' => 'rich_editor'
-				),
+				),*/
 			),
-			'second_tab'  => array(
+/*			'second_tab'  => array(
 				'extend_me' => array(
 					'name' => 'Extend me',
 					'desc' => __( 'You can extend me via hooks and filters.', self::$plugin_name ),
 					'type' => 'text'
 				)
-			)
+			)*/
 		);
 
 		return self::apply_tab_slug_filters( $settings );
