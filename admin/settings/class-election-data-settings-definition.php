@@ -19,23 +19,8 @@
  */
 class Election_Data_Settings_Definition {
 
+	// @TODO: change plugin-name
 	public static $plugin_name = 'election-data';
-
-	/**
-	 * Sanitize plugin name.
-	 *
-	 * Lowercase alphanumeric characters and underscores are allowed.
-	 * Uppercase characters will be converted to lowercase.
-	 * Dashes characters will be converted to underscores.
-	 *
-	 * @access    private
-	 * @return    string            Sanitized snake cased plugin name
-	 */
-	private static function get_snake_cased_plugin_name() {
-
-		return str_replace( '-', '_', sanitize_key( self::$plugin_name ) );
-
-	}
 
 	/**
 	 * [apply_tab_slug_filters description]
@@ -53,7 +38,7 @@ class Election_Data_Settings_Definition {
 
 			$options = isset( $default_settings[ $tab_slug ] ) ? $default_settings[ $tab_slug ] : array();
 
-			$extended_settings[ $tab_slug ] = apply_filters( self::get_snake_cased_plugin_name() . '_settings_' . $tab_slug, $options );
+			$extended_settings[ $tab_slug ] = apply_filters( 'election_data_settings_' . $tab_slug, $options );
 		}
 
 		return $extended_settings;
@@ -80,7 +65,7 @@ class Election_Data_Settings_Definition {
 		$tabs['news_scraping_tab'] = __( 'News Scraping', self::$plugin_name );
 		//$tabs['second_tab']  = __( 'Second Tab', self::$plugin_name );
 
-		return apply_filters( self::get_snake_cased_plugin_name() . '_settings_tabs', $tabs );
+		return apply_filters( 'election_data_settings_tabs', $tabs );
 	}
 
 	/**
@@ -112,7 +97,7 @@ class Election_Data_Settings_Definition {
 					'type' => 'text',
 					'std' => '2am'
 				),
-				'freqeuency' => array(
+				'frequency' => array(
 					'name' => __( 'Frequency', self::$plugin_name ),
 					'desc' => __( 'The frequency of the scraping.', self::$plugin_name ),
 					'options' => array(
@@ -227,7 +212,7 @@ class Election_Data_Settings_Definition {
 					'type' => 'rich_editor'
 				),*/
 			),
-/*			'second_tab'  => array(
+			/*'second_tab'  => array(
 				'extend_me' => array(
 					'name' => 'Extend me',
 					'desc' => __( 'You can extend me via hooks and filters.', self::$plugin_name ),

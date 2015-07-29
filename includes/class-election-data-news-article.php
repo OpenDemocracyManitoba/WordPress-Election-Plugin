@@ -252,8 +252,7 @@ class Election_Data_News_Article {
 				}
 					
 				foreach ( $this->custom_post_meta['fields'] as $field => $value ) {
-					if ( !empty( $_POST['field_' . $field] ) ) {
-						$new = $_POST['field_' . $field];
+					if ( !empty( $_POST["field_$field"] ) ) {$new = $_POST["field_$field"];
 						update_post_meta( $post_id, $value['meta_id'], $new );
 					}
 				}
@@ -339,7 +338,7 @@ class Election_Data_News_Article {
 		}
 		foreach ( $this->taxonomies as $taxonomy ) {
 			if ( isset($taxonomy['args']['show_admin_column']) && $taxonomy['args']['show_admin_column'] ) {
-				$columns['taxonomy-' . $taxonomy['name']] = 'taxonomy-' . $taxonomy['name'];
+				$columns["taxonomy-{$taxonomy['name']}"] = "taxonomy-{$taxonomy['name']}";
 			}
 		}
 
@@ -413,7 +412,7 @@ SQL;
 				}
 				
 				$args = array(
-					'show_option_all' => 'All ' . $taxonomy['args']['labels']['name'],
+					'show_option_all' => "All {$taxonomy['args']['labels']['name']}",
 					'taxonomy' => $name,
 					'name' => $query,
 					'orderby' => 'name',
@@ -437,11 +436,11 @@ SQL;
 			case $this->custom_post['name']:
 				if ( is_single() )
 				{
-					$template_file = 'single-' . $this->custom_post['name'] . '.php';
+					$template_file = "single-{$this->custom_post['name']}.php";
 				}
 				else
 				{
-					$template_file = 'archive-' . $this->custom_post['name'] . '.php';
+					$template_file = "archive-{$this->custom_post['name']}.php";
 				}
 				break;
 			case '':
@@ -472,14 +471,14 @@ SQL;
 	function setup_admin_scripts() {
 		global $current_screen;
 		
-		if ( $current_screen->id == 'edit-' . $this->custom_post['name'] ) {
-			wp_register_script( 'quick-edit-' . $this->custom_post['name'], plugin_dir_url( __FILE__ )  . 'js/quick-edit.js', array( 'jquery', 'inline-edit-post' ), '', true  );
+		if ( $current_screen->id == "edit-{$this->custom_post['name']}" ) {
+			wp_register_script( "quick-edit-{$this->custom_post['name']}", plugin_dir_url( __FILE__ )  . 'js/quick-edit.js', array( 'jquery', 'inline-edit-post' ), '', true  );
 			$translation_array = array();
 			foreach ( $this->custom_post_meta['admin_column_fields'] as $field => $value ) {
 				$translation_array[$field] = $this->custom_post_meta['fields'][$field]['id'];
 			}
 			
-			wp_localize_script( 'quick-edit-' . $this->custom_post['name'], 'ed_quick_edit', $translation_array );
+			wp_localize_script( "quick-edit-{$this->custom_post['name']}", 'ed_quick_edit', $translation_array );
 			
 			$translation_array = array();
 			if ( isset( $this->custom_post['args']['hide_quick_edit_fields'] ) ) {
@@ -488,7 +487,7 @@ SQL;
 				}
 			}
 
-			wp_localize_script( 'quick-edit-' . $this->custom_post['name'], 'ed_remove_columns', $translation_array );
+			wp_localize_script( "quick-edit-{$this->custom_post['name']}", 'ed_remove_columns', $translation_array );
 			
 			$translation_array = array();
 			if ( isset( $this->custom_post['args']['quick_edit_column_names'] ) ) {
@@ -497,14 +496,14 @@ SQL;
 				}
 			}
 			
-			wp_localize_script( 'quick-edit-' . $this->custom_post['name'], 'ed_rename_columns', $translation_array );
+			wp_localize_script( "quick-edit-{$this->custom_post['name']}", 'ed_rename_columns', $translation_array );
 			
-			wp_enqueue_script( 'quick-edit-' . $this->custom_post['name'] );
+			wp_enqueue_script( "quick-edit-{$this->custom_post['name']}" );
 		}
 	}
 	
 	function setup_public_scripts() {
-		wp_enqueue_style( 'ed_' . $this->custom_post['name'] . '_style', plugin_dir_url( __FILE__ ) . 'css/application.css' );
+		wp_enqueue_style( "ed_{$this->custom_post['name']}_style", plugin_dir_url( __FILE__ ) . 'css/application.css' );
 	}
 	
 	function get_or_create_parent_taxonomy_terms( $taxonomy_name, $parent_names ) {
@@ -716,7 +715,7 @@ SQL;
 		foreach ( $references_by_name as $reference_name => $reference_id )
 		{
 			$mentions = $this->get_individual_news_articles( $reference_name );
-			$mentions += $this->get_individual_news_articles( $reference_name, 'Winnipeg' );  //TODO: Change 'Winnipeg' to an option.
+			$mentions += $this->get_individual_news_articles( $reference_name, Election_Data_Option::get_option( 'location' ) );
 			foreach ( $mentions as $mention ) {
 				if ( isset( $sources['Not Local'][$mention['base_url']] ) )
 				{
@@ -808,29 +807,59 @@ SQL;
 	function setup_cron() {
 		$timestamp = wp_next_scheduled( 'ed_update_news_articles' );
 		if ( $timestamp == false ) {
-			wp_schedule_event(strtotime('4am CDT'), 'daily', 'ed_update_news_articles' );
+			$this->schedule_cron( Election_Data_Option::get_option( 'time' ), Election_Data_Option::get_option( 'frequency' ) );
 		}
 	}
-	
+
 	function stop_cron() {
 		wp_clear_scheduled_hook( 'ed_update_news_articles' );
 	}
 	
-	function change_cron() {
+	function schedule_cron( $time_string, $frequency )
+	{
+		$time = strtotime( $time_string );
+		if ( $time and $time < time() ) {
+			$time = strtotime( "$time_string tomorrow" );
+		}
 		
+		if ( $time ) {
+			wp_schedule_event($time, $frequency, 'ed_update_news_articles' );
+		}
+		
+		wp_schedule_event($time, $frequency, 'ed_update_news_articles' );
+	}
+	
+	function change_cron_frequency( $frequency ) {
+		$this->stop_cron();
+		$this->schedule_cron( Election_Data_Option::get_option( 'time' ), $frequency );
+	}
+	
+	function change_cron_time( $time ) {
+		$this->stop_cron();
+		$this->schedule_cron( $time, Election_Data_Option::get_option( 'frequency' ) );
+	}
+	
+	function validate_time( $new_value, $old_value, $settings_slug )
+	{
+		if ( !strtotime( $new_value ) && !strtotime( "$new_value tomorrow" ) ) {
+			$new_value = $old_value;
+			add_settings_error( $settings_slug, 'Invalid_time', __( 'The time must be a valid time without a date.', 'election_data' ), 'error' );
+		}
+		
+		return $new_value;
 	}
 	
 	function admin_init( $loader )
 	{
 		//error_log ( print_r(time(), true) );
 		$loader->add_action( 'admin_init', $this, 'admin' );
-		$loader->add_action( 'save_post_' . $this->custom_post['name'], $this, 'save_custom_post_fields', 10, 2 );
+		$loader->add_action( "save_post_{$this->custom_post['name']}", $this, 'save_custom_post_fields', 10, 2 );
 		$loader->add_action( 'wp_ajax_save_post_bulk_edit', $this, 'save_post_bulk_edit' );
-		$loader->add_filter( 'manage_edit-' . $this->custom_post['name'] . '_columns', $this, 'define_columns' );
+		$loader->add_filter( "manage_edit-{$this->custom_post['name']}_columns", $this, 'define_columns' );
 		$loader->add_action( 'manage_posts_custom_column', $this, 'populate_columns' );
 		$loader->add_action( 'bulk_edit_custom_box', $this, 'bulk_quick_edit_custom_box' );
 		$loader->add_action( 'quick_edit_custom_box', $this, 'bulk_quick_edit_custom_box' );
-		$loader->add_filter( 'manage_edit-' . $this->custom_post['name'] . '_sortable_columns', $this, 'sort_columns' );
+		$loader->add_filter( "manage_edit-{$this->custom_post['name']}_sortable_columns", $this, 'sort_columns' );
 		$loader->add_filter( 'posts_clauses', $this, 'taxonomy_clauses', 10, 2 );
 		$loader->add_filter( 'request', $this, 'column_orderby' );
 	    $loader->add_action( 'restrict_manage_posts', $this, 'filter_lists' );
@@ -843,7 +872,9 @@ SQL;
 			$loader->add_filter( 'enter_title_here', $this, 'update_title' );
 		}
 		$loader->add_action( 'ed_update_news_articles', $this, 'update_news_articles' );
-		$loader->add_action( 'election_data_settings_on_change_time', $this, 'change_cron' );
+		$loader->add_action( 'election_data_settings_on_change_time', $this, 'change_cron_time' );
+		$loader->add_action( 'election_data_settings_on_change_frequency', $this, 'change_cron_frequency' );
+		$loader->add_filter( 'election_data_settings_validate_time', $this, 'validate_time', 10, 3 );
 	}
 	
 	function init( $loader )

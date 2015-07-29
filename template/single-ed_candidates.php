@@ -8,24 +8,21 @@
  */
 
 get_header(); 
+require_once plugin_dir_path( __FILE__ ) . 'ed_functions.php';
 $candidate_id = get_the_ID();
-require_once plugin_dir_path( __FILE__ ) . 'ed_candidates.php';
-require_once plugin_dir_path( __FILE__ ) . 'ed_candidates_party.php';
-require_once plugin_dir_path( __FILE__ ) . 'ed_candidates_constituency.php';
-$display_constituency = true;
-$display_name = false;
-$display_news = false;
-$display_party = true;
-$display_incumbent = 'constituency';
+$candidate = get_candidate( $candidate_id );
+$party = get_party_from_candidate( $candidate_id );
+$constituency = get_constituency_from_candidate( $candidate_id );
+$news = get_news( $candidate_id );
  ?>
 
 <div id="primary">
     <div id="content" role="main">
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 			<header>
-				<h2 class="title"><?php echo $name; ?></h2>
+				<h2 class="title"><?php echo $candidate['name']; ?></h2>
 			</header>
-			<?php require plugin_dir_path( __FILE__ ) . 'ed_candidate_details.php'; ?>
+			<?php display_candidate( $candidate, $constituency, $party, $news, array( 'name', 'news' ), 'constituency' ); ?>
 		</article>
 	</div>
 </div>

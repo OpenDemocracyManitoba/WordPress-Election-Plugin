@@ -49,7 +49,7 @@
 
 				<div id="postbox-container" class="postbox-container">
 
-					<?php do_meta_boxes( $this->snake_cased_plugin_name . '_settings_' . $active_tab, 'normal', $active_tab ); ?>
+					<?php do_meta_boxes( 'election_data_settings_' . $active_tab, 'normal', $active_tab ); ?>
 
 				</div><!-- #postbox-container-->
 

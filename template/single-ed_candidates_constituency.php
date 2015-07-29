@@ -1,6 +1,7 @@
 <?php
 
 get_header(); 
+require_once plugin_dir_path( __FILE__ ) . 'ed_functions.php';
 $constituency_id = get_queried_object()->term_id; 
 $args = array(
 	'post_type' => 'ed_candidates',
@@ -14,26 +15,20 @@ $args = array(
 	'orderby' => 'rand',
 );
 
-$display_constituency = false;
-$display_name = true;
-$display_news = true;
-$display_party = true;
-$display_incumbent = 'name';
-
 $the_query = new WP_Query( $args );
-require_once plugin_dir_path( __FILE__ ) . 'ed_candidates_constituency.php';
+
+$constituency = get_constituency( $constituency_id );
 ?>
 <div id="primary">
     <div id="content" role="main">
 		<?php while ( $the_query->have_posts() ) :
 			$the_query->the_post();
 			$candidate_id = get_the_ID();
-			unset( $party_id );
-			require plugin_dir_path( __FILE__ ) . 'ed_candidates.php';
-			require plugin_dir_path( __FILE__ ) . 'ed_candidates_party.php';
-			require plugin_dir_path( __FILE__ ) . 'ed_news_articles.php'; ?>
+			$candidate = get_candidate( $candidate_id );
+			$party = get_party_from_candidate( $candidate_id );
+			$news = get_news( $candidate_id )?>
 			<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-				<?php require plugin_dir_path( __FILE__ ) . 'ed_candidate_details.php'; ?>
+				<?php display_candidate( $candidate, $constituency, $party, $news, array( 'constituency' ), 'name' ); ?>
 			</article>
 		<?php endwhile ?>
 	</div>
