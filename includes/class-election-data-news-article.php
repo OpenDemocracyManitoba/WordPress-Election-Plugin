@@ -27,9 +27,6 @@ class Election_Data_News_Article {
 	// Definition of the custom post type.
 	protected $custom_post;
 	
-	// Definition of the custom post meta fields.
-	protected $custom_post_meta;
-	
 	// Definition of the Party and Constituency taxonomies.
 	protected $taxonomies;
 	
@@ -63,12 +60,14 @@ class Election_Data_News_Article {
 			)
 		);
 		
-		$this->custom_post_meta = array(
-			'id' => 'election_data_news_article_meta_box',
-			'title' => __( 'News Article Details' ),
-			'post_type' => $this->custom_post['name'],
-			'context' => 'normal',
-			'priority' => 'high',
+		$custom_post_meta = array(
+			'meta_box' => array( 
+				'id' => 'election_data_news_article_meta_box',
+				'title' => __( 'News Article Details' ),
+				'post_type' => $this->custom_post['name'],
+				'context' => 'normal',
+				'priority' => 'high',
+			),
 			'fields' => array(
 				'url' => array(
 					'label' => __( 'URL' ),
@@ -96,7 +95,7 @@ class Election_Data_News_Article {
 					'std' => '',
 				),
 			),
-			'admin_column_fields' => array( 'url' => '' ),
+			'admin_columns' => array( 'url' ),
 		);
 
 		$this->taxonomies = array(
@@ -172,6 +171,12 @@ class Election_Data_News_Article {
 				'local_images' => true,
 			),
 		);
+		
+		$meta = new Post_Meta( 
+			$custom_post_meta['meta_box'],
+			$custom_post_meta['fields'],
+			$custom_post_meta['admin_columns']
+		);
 	}
 	
 	function taxonomy_category_radio_meta_box ($post, $box) {
@@ -214,80 +219,10 @@ class Election_Data_News_Article {
 	// Initialize the administrative interface.
 	function admin()
 	{
-		add_meta_box( 
-			$this->custom_post_meta['id'],
-			$this->custom_post_meta['title'],
-			array( $this, 'render_custom_post_meta_box' ),
-			$this->custom_post_meta['post_type'], 
-			$this->custom_post_meta['context'],
-			$this->custom_post_meta['priority']
-		);
 	}
 	
-	// The call back to create the custom post meta box.
-	function render_custom_post_meta_box( $post ) {
-		$fields = $this->custom_post_meta['fields'];
-		require plugin_dir_path( __FILE__ ) . 'partials/election-data-meta-box-display.php';
-	}	
-	
-	function save_post_bulk_edit( ) {
-		// check autosave
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			wp_die();
-		}
-		
-		$post_ids = empty( $_POST['post_ids'] ) ? '' : $_POST['post_ids'];
-		if ( is_array( $post_ids ) ) {
-			foreach ( $post_ids as $post_id ) {
-				$post_type = get_post_type( $post_id );
-								
-				// check if the Custom Post post type
-				if ( !$this->custom_post['name'] == $post_type ) {
-					continue;
-				}
-				
-				// check permissions
-				if ( !current_user_can( 'edit_post', $post_id ) ) {
-					continue;
-				}
-					
-				foreach ( $this->custom_post_meta['fields'] as $field => $value ) {
-					if ( !empty( $_POST["field_$field"] ) ) {$new = $_POST["field_$field"];
-						update_post_meta( $post_id, $value['meta_id'], $new );
-					}
-				}
-			}
-		}
-		
-		wp_die();
-	}
-	
-	// Stores the meta data from the meta box for the custom post.
-	function save_custom_post_fields( $post_id, $post ) {		
-		// check autosave
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			return $post_id;
-		}
-		
-		// check permissions
-		if ( !current_user_can( 'edit_post', $post_id ) ) {
-			return $post_id;
-		}
-			
-		foreach ( $this->custom_post_meta['fields'] as $field ) {
-			if ( isset( $_POST[$field['id']] ) ) {
-				$new = $_POST[$field['id']];
-				update_post_meta( $post_id, $field['meta_id'], $new );
-			}
-		}
-	}
-
 	// Identifies the columns to display in the administrative interface.
 	function define_columns( $columns ) {
-		foreach ( $this->custom_post_meta['admin_column_fields'] as $field => $value ) {
-			$columns[$field] = $this->custom_post_meta['fields'][$field]['label'];
-		}
-		
 		if ( isset( $this->custom_post['args']['admin_column_names'] ) ) {
 			foreach ( $this->custom_post['args']['admin_column_names'] as $column_name => $title ) {
 				$columns[$column_name] = $title;
@@ -303,39 +238,8 @@ class Election_Data_News_Article {
 		return $columns;
 	}
 	
-	// Fills the columns data.
-	function populate_columns( $column ) {
-		if ( isset( $this->custom_post_meta['admin_column_fields'][$column] ) ) {
-			echo "<div id='$column-" . get_the_ID() . "'>";
-			$field = $this->custom_post_meta['fields'][$column];
-			$value = get_post_meta( get_the_ID(), $field['meta_id'], true );
-			switch ( $field['type'] ) {
-				case 'checkbox':
-					echo $value ? 'X' : '';
-					break;
-				case 'url':
-					echo "<a href='$value'>$value</a>";
-					break;
-				default:
-					echo esc_html( $value );
-			}
-			echo '</div>';
-		}
-	}
-
-	// Adds meta data to the custom box used when quick or bulk editting the custom post.
-	function bulk_quick_edit_custom_box( $column_name ) {
-		if ( isset( $this->custom_post_meta['admin_column_fields'][$column_name] ) ) {
-			$field = $this->custom_post_meta['fields'][$column_name];-
-			require plugin_dir_path( __FILE__ ) . 'partials/election-data-quick-edit-display.php' ;
-		}
-	}
-	
 	// Identifies the sortable columns in the administrative interface.
 	function sort_columns( $columns ) {
-		foreach ( $this->custom_post_meta['admin_column_fields'] as $field => $value ) {
-			$columns[$field] = $field;
-		}
 		foreach ( $this->taxonomies as $taxonomy ) {
 			if ( isset($taxonomy['args']['show_admin_column']) && $taxonomy['args']['show_admin_column'] ) {
 				$columns["taxonomy-{$taxonomy['name']}"] = "taxonomy-{$taxonomy['name']}";
@@ -366,21 +270,6 @@ SQL;
 		}
 		
 		return $clauses;
-	}
-	
-	// allows meta data columns to be sorted.
-	function column_orderby( $vars ) {
-		if ( !is_admin() )
-			return $vars;
-		if ( isset( $vars['post_type'] ) && $this->custom_post['name'] == $vars['post_type'] && isset( $vars['orderby'] ) ) {
-			foreach ( $this->custom_post_meta['admin_column_fields'] as $field => $value ) {
-				if ( $this->custom_post_meta['fields'][$field]['meta_id'] == $vars['orderby'] ) {
-					$vars = array_merge( $vars, array( 'meta_key' => $vars['orderby'], 'orderby' => 'meta_value' ) );
-				}
-			}
-		}
-		
-		return $vars;
 	}
 	
 	// Removes the date filter from the admin column.
@@ -473,13 +362,6 @@ SQL;
 		
 		if ( $current_screen->id == "edit-{$this->custom_post['name']}" ) {
 			wp_register_script( "quick-edit-{$this->custom_post['name']}", plugin_dir_url( __FILE__ )  . 'js/quick-edit.js', array( 'jquery', 'inline-edit-post' ), '', true  );
-			$translation_array = array();
-			foreach ( $this->custom_post_meta['admin_column_fields'] as $field => $value ) {
-				$translation_array[$field] = $this->custom_post_meta['fields'][$field]['id'];
-			}
-			
-			wp_localize_script( "quick-edit-{$this->custom_post['name']}", 'ed_quick_edit', $translation_array );
-			
 			$translation_array = array();
 			if ( isset( $this->custom_post['args']['hide_quick_edit_fields'] ) ) {
 				foreach ( $this->custom_post['args']['hide_quick_edit_fields'] as $column ) {
@@ -849,38 +731,28 @@ SQL;
 		return $new_value;
 	}
 	
-	function admin_init( $loader )
+	function define_hooks( )
 	{
-		//error_log ( print_r(time(), true) );
-		$loader->add_action( 'admin_init', $this, 'admin' );
-		$loader->add_action( "save_post_{$this->custom_post['name']}", $this, 'save_custom_post_fields', 10, 2 );
-		$loader->add_action( 'wp_ajax_save_post_bulk_edit', $this, 'save_post_bulk_edit' );
-		$loader->add_filter( "manage_edit-{$this->custom_post['name']}_columns", $this, 'define_columns' );
-		$loader->add_action( 'manage_posts_custom_column', $this, 'populate_columns' );
-		$loader->add_action( 'bulk_edit_custom_box', $this, 'bulk_quick_edit_custom_box' );
-		$loader->add_action( 'quick_edit_custom_box', $this, 'bulk_quick_edit_custom_box' );
-		$loader->add_filter( "manage_edit-{$this->custom_post['name']}_sortable_columns", $this, 'sort_columns' );
-		$loader->add_filter( 'posts_clauses', $this, 'taxonomy_clauses', 10, 2 );
-		$loader->add_filter( 'request', $this, 'column_orderby' );
-	    $loader->add_action( 'restrict_manage_posts', $this, 'filter_lists' );
-		$loader->add_action( 'admin_enqueue_scripts', $this, 'setup_admin_scripts' );
+		add_action( 'admin_init', array( $this, 'admin' ) );
+		add_filter( "manage_edit-{$this->custom_post['name']}_columns", array( $this, 'define_columns' ) );
+		add_filter( "manage_edit-{$this->custom_post['name']}_sortable_columns", array( $this, 'sort_columns' ) );
+		add_filter( 'posts_clauses', array( $this, 'taxonomy_clauses' ), 10, 2 );
+	    add_action( 'restrict_manage_posts', array( $this, 'filter_lists' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'setup_admin_scripts' ) );
 		if ( isset( $this->custom_post['args']['remove_admin_column_date_filter'] ) ) {
-			$loader->add_filter( 'months_dropdown_results', $this, 'remove_dates' );
+			add_filter( 'months_dropdown_results', array( $this, 'remove_dates' ) );
 		}
 		
 		if ( isset( $this->custom_post['args']['enter_title_here'] ) ) {
-			$loader->add_filter( 'enter_title_here', $this, 'update_title' );
+			add_filter( 'enter_title_here', array( $this, 'update_title' ) );
 		}
-		$loader->add_action( 'ed_update_news_articles', $this, 'update_news_articles' );
-		$loader->add_action( 'election_data_settings_on_change_time', $this, 'change_cron_time' );
-		$loader->add_action( 'election_data_settings_on_change_frequency', $this, 'change_cron_frequency' );
-		$loader->add_filter( 'election_data_settings_validate_time', $this, 'validate_time', 10, 3 );
-	}
-	
-	function init( $loader )
-	{
-		$loader->add_action( 'init', $this, 'initialize' );
-		$loader->add_filter( 'template_include', $this, 'include_template_function', 1 );
-		$loader->add_filter( 'wp_enqueue_scripts', $this, 'setup_public_scripts' );
+		add_action( 'ed_update_news_articles', array( $this, 'update_news_articles' ) );
+		add_action( 'election_data_settings_on_change_time', array( $this, 'change_cron_time' ) );
+		add_action( 'election_data_settings_on_change_frequency', array( $this, 'change_cron_frequency' ) );
+		add_filter( 'election_data_settings_validate_time', array( $this, 'validate_time' ), 10, 3 );
+
+		add_action( 'init', array( $this, 'initialize' ) );
+		add_filter( 'template_include', array( $this, 'include_template_function' ), 1 );
+		add_filter( 'wp_enqueue_scripts', array( $this, 'setup_public_scripts' ) );
 	}	
  }

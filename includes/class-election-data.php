@@ -76,6 +76,11 @@ class Election_Data {
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 
+		$candidate = new Election_Data_Candidate();
+		$candidate->define_hooks();
+		
+		$news_article = new Election_Data_News_Article();
+		$news_article->define_hooks();
 	}
 
 	/**
@@ -181,12 +186,7 @@ class Election_Data {
 
 		$plugin_meta_box = new Election_Data_Meta_Box( $this->get_plugin_name() );
 		$this->loader->add_action( 'load-toplevel_page_' . $this->get_plugin_name() , $plugin_meta_box, 'add_meta_boxes' );
-		
-		$candidate = new Election_Data_Candidate();
-		$candidate->admin_init( $this->loader );
-		
-		$news_article = new Election_Data_News_Article();
-		$news_article->admin_init( $this->loader );
+
 	}
 
 	/**
@@ -202,12 +202,7 @@ class Election_Data {
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
-		
-		$candidate = new Election_Data_Candidate();
-		$candidate->init( $this->loader );
-		
-		$news_article = new Election_Data_News_Article();
-		$news_article->init( $this->loader );
+
 	}
 
 	/**
