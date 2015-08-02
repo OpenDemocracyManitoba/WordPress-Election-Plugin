@@ -98,7 +98,6 @@ class Election_Data_Sanitization_Helper {
 				$error_occurred = true; 
 				$input[$key] = $old_values[$key];
 			}
-			error_log( "settings_updated: $settings_updated,  error_occurred: $error_occurred" );
 		}
 
 		if ( $settings_updated )

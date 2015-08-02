@@ -21,8 +21,8 @@
  * @author     Robert Burton <RobertBurton@gmail.com>
  */
 
-require_once plugin_dir_path( dirname( __FILE__ ) ) . 'Tax-meta-class/Tax-meta-class.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-post-meta.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-taxonomy-meta.php';
 
 class Election_Data_Candidate {
 	// Definition of the custom post type.
@@ -30,9 +30,6 @@ class Election_Data_Candidate {
 	
 	// Definition of the Party and Constituency taxonomies.
 	protected $taxonomies;
-	
-	// Definition of the Party and Constituency meta fields.
-	protected $taxonomy_meta;
 	
 	function __construct() {
 		$this->custom_post = array(
@@ -190,109 +187,93 @@ class Election_Data_Candidate {
 			),
 		);
 		
-		$this->taxonomy_meta = array(
+		$taxonomy_meta = array(
 			'party' => array(
-				'id' => $this->taxonomies['party']['name'] . '_meta_box',
-				'title' => 'Party Details',
-				'pages' => array( $this->taxonomies['party']['name'] ),
-				'context' => 'normal',
+				'taxonomy' => $this->taxonomies['party']['name'],
 				'fields' => array(
 					array(
 						'type' => 'color',
 						'id' => 'colour',
 						'std' => '#000000',
 						'desc' => __( 'Select a colour to identify the party.' ),
-						'name' => __( 'Colour' ),
+						'label' => __( 'Colour' ),
 					),
 					array(
 						'type' => 'image',
 						'id' => 'logo',
 						'desc' => __( 'Select a logo for the party.' ),
-						'name' => __( 'Logo' ),
+						'label' => __( 'Logo' ),
+						'std' => '',
 					),
 					array(
 						'type' => 'url',
 						'id' => 'website',
 						'desc' => __( "Enter the URL to the party's web site." ),
-						'name' => __( 'Web Site URL' ),
-						'style' => '',
+						'label' => __( 'Web Site URL' ),
+						'std' => '',
 					),
 					array(
 						'type' => 'text',
 						'id' => 'phone',
 						'desc' => __( "Enter the party's phone number." ),
-						'name' => __( 'Phone Number' ),
-						'style' => '',
+						'label' => __( 'Phone Number' ),
+						'std' => '',
 					),
 					array(
 						'type' => 'text',
 						'id' => 'address',
 						'desc' => __( "Enter the party's address." ),
-						'name' => __( 'Address' ),
-						'style' => '',
+						'label' => __( 'Address' ),
+						'std' => '',
 					),
 					array(
 						'type' => 'email',
 						'id' => 'email',
 						'desc' => __( "Enter the party's email address." ),
-						'name' => __( 'Email Address' ),
-						'style' => '',
+						'label' => __( 'Email Address' ),
+						'std' => '',
 					),
 					array(
 						'type' => 'url',
 						'id' => 'facebook',
 						'desc' => __( "Enter the URL to the party's facebook page." ),
-						'name' => __( 'Facbook Page' ),
-						'style' => '',
+						'label' => __( 'Facbook Page' ),
+						'std' => '',
 					),
 					array(
 						'type' => 'url',
 						'id' => 'youtube',
 						'desc' => __( "Enter the URL to the party's youtube channel or video" ),
-						'name' => __( 'Youtube Channel or Video' ),
-						'style' => '',
+						'label' => __( 'Youtube Channel or Video' ),
+						'std' => '',
 					),
 					array(
 						'type' => 'url',
 						'id' => 'twitter',
 						'desc' => __( "Enter the URL to the party's twitter feed." ),
-						'name' => __( 'Twitter Feed' ),
-						'style' => '',
+						'label' => __( 'Twitter Feed' ),
+						'std' => '',
 					),
 				),
-				'local_images' => true,
 			),
 			'constituency' => array(
-				'id' => $this->taxonomies['constituency']['name'] . '_meta_box',
-				'title' => 'Constituency Details',
-				'pages' => array( $this->taxonomies['constituency']['name'] ),
-				'context' => 'normal',
+				'taxonomy' => $this->taxonomies['constituency']['name'],
 				'fields' => array(
 					array(
-						'type' => 'repeater',
+						'type' => 'image',
+						'id' => 'map',
+						'desc' => __( "A map of the child constituencies." ),
+						'label' => __( "Constituency Map" ),
+						'std' => '',
+					),
+					array(
+						'type' => 'text',
 						'id' => 'coordinates',
-						'name' => __( 'Coordinates' ),
-						'desc' => __( 'The coordinates of the boundary of the constituency.' ),
-						'inline' => false,
-						'fields' => array(
-							array(
-								'type' => 'text',
-								'id' => 'latitude',
-								'desc' => __( 'Enter the latitude of the boundary point' ),
-								'name' => __( 'Latitude' ),
-								'style' => '',
-							),
-							array(
-								'type' => 'text',
-								'id' => 'longitude',
-								'desc' => __( 'Enter the longitude of the boundary point' ),
-								'name' => __( 'Longitude' ),
-								'style' => '',
-							),
-						),
+						'desc' => __( 'HTML map coordinates for constituency location on parent constituencies map. You can generate these coordinates by using an online map tool available <a href="https://www.google.com/search?q=html+map+generator+online">here</a>' ),
+						'label' => __( 'Coordinates' ),
+						'std' => '',
 					),
 				),
-				'local_images' => true,
 			),
 		);
 		
@@ -301,6 +282,10 @@ class Election_Data_Candidate {
 			$custom_post_meta['fields'],
 			$custom_post_meta['admin_columns']
 		);
+		
+		foreach ( $taxonomy_meta as $name => $tax_meta_config ) {
+			$tax_meta = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'] );
+		}
 	}
 	
 	function taxonomy_category_radio_meta_box ($post, $box) {
@@ -318,11 +303,6 @@ class Election_Data_Candidate {
 			}
 			
 			register_taxonomy( $taxonomy['name'], $taxonomy['post_type'], $taxonomy['args'] );
-		}
-		
-		foreach ( $this->taxonomy_meta as $meta_config ) {
-			$meta = new Tax_Meta_Class( $meta_config );
-			$meta->Finish();
 		}
 	}
 	

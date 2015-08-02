@@ -21,7 +21,8 @@
  * @author     Robert Burton <RobertBurton@gmail.com>
  */
 
-require_once plugin_dir_path( dirname( __FILE__ ) ) . 'Tax-meta-class/Tax-meta-class.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-post-meta.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-taxonomy-meta.php';
 
 class Election_Data_News_Article {
 	// Definition of the custom post type.
@@ -29,9 +30,6 @@ class Election_Data_News_Article {
 	
 	// Definition of the Party and Constituency taxonomies.
 	protected $taxonomies;
-	
-	// Definition of the Party and Constituency meta fields.
-	protected $taxonomy_meta;
 	
 	function __construct() {
 		$this->custom_post = array(
@@ -152,23 +150,18 @@ class Election_Data_News_Article {
 			),
 		);
 
-		$this->taxonomy_meta = array(
+		$taxonomy_meta = array(
 			'reference' => array(
-				'id' => $this->taxonomies['reference']['name'] . '_meta_box',
-				'title' => 'Reference Details',
-				'pages' => array( $this->taxonomies['reference']['name'] ),
-				'context' => 'normal',
+				'taxonomy' => $this->taxonomies['reference']['name'],
 				'fields' => array(
 					array(
 						'type' => 'text',
 						'id' => 'reference_post_id',
 						'std' => '',
 						'desc' => __( 'The post id for the reference.' ),
-						'name' => __( 'Reference Id' ),
-						'style' => ''
+						'label' => __( 'Reference Id' ),
 					),
 				),
-				'local_images' => true,
 			),
 		);
 		
@@ -177,6 +170,10 @@ class Election_Data_News_Article {
 			$custom_post_meta['fields'],
 			$custom_post_meta['admin_columns']
 		);
+		
+		foreach ( $taxonomy_meta as $name => $tax_meta_config ) {
+			$tax_meta = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'] );
+		}
 	}
 	
 	function taxonomy_category_radio_meta_box ($post, $box) {
@@ -195,11 +192,6 @@ class Election_Data_News_Article {
 			}
 			
 			register_taxonomy( $taxonomy['name'], $taxonomy['post_type'], $taxonomy['args'] );
-		}
-		
-		foreach ( $this->taxonomy_meta as $meta_config ) {
-			$meta = new Tax_Meta_Class( $meta_config );
-			$meta->Finish();
 		}
 	}
 	

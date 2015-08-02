@@ -3,7 +3,6 @@ require_once plugin_dir_path( __FILE__ ) . 'ed_functions.php';
 
 $party_id = get_queried_object()->term_id;
 $party = get_party( $party_id );
-error_log( print_r( $party, true ) );
 
 function display_candidates( $the_query, $article_id )
 {

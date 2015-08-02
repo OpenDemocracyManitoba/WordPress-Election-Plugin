@@ -173,8 +173,6 @@ class Post_Meta {
 	 *
 	 */
 	public function save_post_fields_ajax( ) {
-		error_log( "Ajax Running" );
-
 		// check autosave
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			wp_die();
@@ -217,8 +215,6 @@ class Post_Meta {
 		if ( !current_user_can( 'edit_post', $post_id ) ) {
 			return $post_id;
 		}
-		
-		error_log( "Non Ajax Running" );
 		
 		// Update the meta data using the posted values.
 		foreach ( $this->fields as $field ) {
@@ -330,8 +326,8 @@ class Post_Meta {
 		global $current_screen;
 		
 		if ( $current_screen->id == "edit-{$this->post_type}" && !empty( $this->admin_columns ) ) {
-			$script_id = "post-meta+-{$this->post_type}";
-			wp_register_script( $script_id, plugin_dir_url( __FILE__ )  . 'js/post-meta.js', array( 'jquery', 'inline-edit-post' ), '', true  );
+			$script_id = "post-meta-{$this->post_type}";
+			wp_register_script( $script_id, plugin_dir_url( __FILE__ )  . 'js/post-meta.js', array( 'jquery', 'inline-edit-post' ), '', true );
 			$translation_array = array();
 			foreach ( $this->admin_columns as $field => $value ) {
 				$translation_array[$field] = $this->prefix . $this->fields[$field]['id'];
@@ -386,11 +382,12 @@ class Post_Meta {
 		switch ( $mode ) {
 			case 'edit':
 				$this->show_edit_label ( $field, $mode );
-				$value = $value ? $value : $field['std'];
+				esc_attr( $value = $value ? $value : $field['std'] );
 				echo "<td><input type='$type' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' size='30' style='width:97%' />";
 				echo "<br />{$field['desc']}</td>";
 				break;
 			case 'quick':
+				$value = esc_attr( $field['std'] );
 				$this->show_quick_label ( $field, $mode );
 				echo "<input type='$type' name='{$this->prefix}{$field['id']}' value='' />";
 				break;

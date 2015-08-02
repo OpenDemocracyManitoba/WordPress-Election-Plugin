@@ -157,7 +157,6 @@ function get_news( $post_id ) {
 
 function display_party( $party )
 {
-	error_log( print_r( $party, true ) );
 	?>
 	<div class='party'>
 		<div class='image' style='border-bottom: 8px solid <?php echo $party['colour']; ?>'>
