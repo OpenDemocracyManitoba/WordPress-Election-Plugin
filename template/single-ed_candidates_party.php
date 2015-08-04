@@ -13,10 +13,10 @@ function display_candidates( $the_query, $article_id )
 		$candidate_id = get_the_ID();
 		$candidate = get_candidate( $candidate_id );
 		$constituency = get_constituency_from_candidate( $candidate_id );
-		$news = get_news( $candidate_id ); 
+		$candidate_news = get_candidate_news( $candidate_id ); 
 		?>
 		<article id="<?php echo $article_id; ?>-<?php the_ID(); ?>" <?php post_class(); ?>>
-			<?php display_candidate( $candidate, $constituency, $party, $news, array( 'party' ), 'constituency' ); ?>
+			<?php display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'party' ), 'constituency' ); ?>
 		</article>
 	<?php endwhile; 
 }

@@ -129,6 +129,11 @@ class Election_Data_Candidate {
 					'type' => 'checkbox',
 					'std' => '',
 				),
+				'reference' => array(
+					'id' => 'reference',
+					'type' => 'hidden',
+					'std' => '',
+				),
 			),
 			'admin_columns' => array( 'phone', 'email', 'website', 'party_leader' ),
 		);
@@ -252,6 +257,11 @@ class Election_Data_Candidate {
 						'id' => 'twitter',
 						'desc' => __( "Enter the URL to the party's twitter feed." ),
 						'label' => __( 'Twitter Feed' ),
+						'std' => '',
+					),
+					array(
+						'type' => 'hidden',
+						'id' => 'reference',
 						'std' => '',
 					),
 				),

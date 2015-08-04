@@ -165,8 +165,7 @@ class Tax_Meta {
 		echo "<p>$desc</p>$footer";
 	}
 	
-	protected function show_text( $field, $mode, $value, $type='text' )
-	{
+	protected function show_text( $field, $mode, $value, $type='text' ) {
 		if ( $mode == 'edit' )
 		{
 			$header = '<td>';
@@ -186,18 +185,33 @@ class Tax_Meta {
 		echo "$header<input type='$type' id='$id' name='$id' value='$value'/><p>$desc</p>$footer";
 	}
 	
-	protected function show_url( $field, $mode, $value )
-	{
+	protected function show_hidden( $field, $mode, $value ) {
+		if ( $mode == 'edit' )
+		{
+			$header = '<td class="hidden">';
+			$footer = '</td></tr>';
+			$value = esc_attr( $value ? $value : $field['std'] );
+			echo '<tr class="form-field">';
+		}
+		else
+		{
+			$header = '';
+			$footer = '';
+			$value = esc_attr( $field['std'] );
+		}
+		$id = esc_attr( "{$this->prefix}{$field['id']}" );
+		echo "$header<input type='hidden' id='$id' name='$id' value='$value'/>$footer";
+	}
+	
+	protected function show_url( $field, $mode, $value ) {
 		$this->show_text( $field, $mode, $value, 'url' );
 	}
 	
-	protected function show_email( $field, $mode, $value )
-	{
+	protected function show_email( $field, $mode, $value ) {
 		$this->show_text( $field, $mode, $value, 'email' );
 	}
 	
-	protected function show_color( $field, $mode, $value )
-	{
+	protected function show_color( $field, $mode, $value ) {
 		$this->show_text( $field, $mode, $value, 'color' );
 	}
 	
@@ -231,6 +245,10 @@ class Tax_Meta {
 	}
 	
 	protected function get_posted_color( $field_id ) {
+		return $this->get_posted_text( $field_id );
+	}
+	
+	protected function get_posted_hidden( $field_id ) {
 		return $this->get_posted_text( $field_id );
 	}
 	

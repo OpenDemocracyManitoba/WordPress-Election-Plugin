@@ -13,7 +13,7 @@ $candidate_id = get_the_ID();
 $candidate = get_candidate( $candidate_id );
 $party = get_party_from_candidate( $candidate_id );
 $constituency = get_constituency_from_candidate( $candidate_id );
-$news = get_news( $candidate_id );
+$candidate_news = get_candidate_news( $candidate_id );
  ?>
 
 <div id="primary">
@@ -22,7 +22,8 @@ $news = get_news( $candidate_id );
 			<header>
 				<h2 class="title"><?php echo $candidate['name']; ?></h2>
 			</header>
-			<?php display_candidate( $candidate, $constituency, $party, $news, array( 'name', 'news' ), 'constituency' ); ?>
+			<?php display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'news' ), 'constituency' );
+			display_candidate_news( $candidate_news, $candidate ); ?>
 		</article>
 	</div>
 </div>

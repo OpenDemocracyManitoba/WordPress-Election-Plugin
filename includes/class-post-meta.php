@@ -403,6 +403,18 @@ class Post_Meta {
 		}
 	}
 	
+	protected function show_hidden( $field, $mode, $value ) {
+		switch ( $mode ) {
+			case 'edit':
+				esc_attr( $value = $value ? $value : $field['std'] );
+				echo "<td class='hidden'><input type='hidden' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' /></td>";
+				break;
+			case 'quick':
+			case 'column':
+				break;
+		}
+	}
+	
 	/**
 	 * Generates the HTML for a URL field.
 	 *

@@ -142,7 +142,7 @@ class Election_Data_News_Article {
 					),
 					'public' => false,
 					'show_tagcloud' => false,
-					'show_admin_column' => false,
+					'show_admin_column' => true,
 					'show_ui' => true,
 					'hierarchical' => true,
 					'query_var' => 'source',
@@ -281,31 +281,34 @@ SQL;
 		
 		if ( $this->custom_post['name'] == $screen->post_type ) {
 			foreach ( $this->taxonomies as $taxonomy ) {
-				$query = $taxonomy['args']['query_var'];
-				$name = $taxonomy['name'];
-				$selected = '';
-				if ( isset( $wp_query->query[$query] ) ) {
-					$term = get_term_by( 'slug', $wp_query->query[$query], $name );
-					if ( $term )
-					{
-						$selected = (int)$term->term_id;
+				if ( $taxonomy['args']['show_admin_column'] )
+				{
+					$query = $taxonomy['args']['query_var'];
+					$name = $taxonomy['name'];
+					$selected = '';
+					if ( isset( $wp_query->query[$query] ) ) {
+						$term = get_term_by( 'slug', $wp_query->query[$query], $name );
+						if ( $term )
+						{
+							$selected = (int)$term->term_id;
+						}
 					}
+					
+					$args = array(
+						'show_option_all' => "All {$taxonomy['args']['labels']['name']}",
+						'taxonomy' => $name,
+						'name' => $query,
+						'orderby' => 'name',
+						'selected' => $selected,
+						'hierarchical' => true,
+						'depth' => 3,
+						'show_count' => false,
+						'hide_empty' => false,
+						'value_field' => 'slug'
+					);
+					
+					wp_dropdown_categories( $args );
 				}
-				
-				$args = array(
-					'show_option_all' => "All {$taxonomy['args']['labels']['name']}",
-					'taxonomy' => $name,
-					'name' => $query,
-					'orderby' => 'name',
-					'selected' => $selected,
-					'hierarchical' => true,
-					'depth' => 3,
-					'show_count' => false,
-					'hide_empty' => true,
-					'value_field' => 'slug'
-				);
-				
-				wp_dropdown_categories( $args );
 			}
 		}
 	}
@@ -431,6 +434,7 @@ SQL;
 				// Add a party reference if it doesn't exist.
 				$term = wp_insert_term( $name, $this->taxonomies['reference']['name'], array( 'parent' => $parent_id ) );
 				update_tax_meta( $term['term_id'], 'reference_post_id', $id );
+				update_tax_meta( $id, 'reference', $term['term_id'] );
 				$references_by_name[$name] = $term['term_id'];
 			} elseif ( $party_reference_names_by_id[$references_by_party_id[$id]] != $name ) {
 				// Update a party reference if it exists, but the name has changed.
@@ -492,6 +496,7 @@ SQL;
 				// Add a candidate reference if it doesn't exist.
 				$term = wp_insert_term( $name, $this->taxonomies['reference']['name'], array( 'parent' => $parent_id ) );
 				update_tax_meta( $term['term_id'], 'reference_post_id', $id );
+				update_post_meta( $id, 'reference', $term['term_id'] );
 				$references_by_name[$name] = $term['term_id'];
 			} elseif ( $candidate_reference_names_by_id[$references_by_candidate_id[$id]] != $name ) {
 				// Update a candidate reference if it exists, but the name has changed.
@@ -523,9 +528,7 @@ SQL;
 		}
 		
 		return $references_by_name;
-
 	}
-	
 	
 	// Update the Reference taxonomy, and return a array of id => reference name.
 	function update_references() {
