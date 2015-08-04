@@ -37,4 +37,4 @@ jQuery(document).ready( function($) {
 			$(this).text(ed_rename_columns[$field]);
 		});
 	}
-});    
+});

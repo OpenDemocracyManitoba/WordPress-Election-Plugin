@@ -1,29 +1,5 @@
-(function($) {
+jQuery(document).ready( function($) {
 	var x = $( '#addtag' );
-	$( '#addtag' ).submit(function( event ) {
-		$( '[id^="' + tm_data['prefix'] + '"]' ).each( function(item) {
-			console.log(item);
-		});
-	});
-	
-	$( '#submit' ).click( function( event ) {
-		$( '[id^="' + tm_data['prefix'] + '"]' ).each( function(item) {
-			console.log(item);
-		});
-		
-		$.each($("#submit").data("events"), function(i, event) {
-			console.log(i);
-			$.each(event, function(j, h) {
-				console.log(h.handler);
-			});
-		});
-		$.each($("#addtag").data("events"), function(i, event) {
-			console.log(i);
-			$.each(event, function(j, h) {
-				console.log(h.handler);
-			});
-		});
-	});
 	
 	$( document ).ajaxComplete(function( event, xhr, settings ) {
       try{
@@ -43,4 +19,4 @@
       }catch(err) {}
     });
 
-})(jQuery);
+})

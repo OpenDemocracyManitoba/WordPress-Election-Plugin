@@ -58,9 +58,11 @@ class Election_Data_Admin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_scripts() {
-
+		global $current_screen;
 		wp_enqueue_script( 'postbox' );
-
+		if ( 'toplevel_page_election-data' == $current_screen->id ) {
+			wp_enqueue_script( 'ed_settings', plugin_dir_url( __FILE__ ) . 'js/settings.js', array( 'jquery' ) );
+		}
 	}
 
 	/**

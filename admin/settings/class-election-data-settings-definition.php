@@ -107,6 +107,15 @@ class Election_Data_Settings_Definition {
 					'type' => 'select',
 					'std' => 'daily'
 				),
+				'button' => array(
+					'name' => '',
+					'desc' => __( 'Manually perform the scraping of news articles.', self::$plugin_name ),
+					'type' => 'button',
+					'options' => array(
+						'id' => 'button_scrape_news',
+						'label' => __( 'Scrape News', self::$plugin_name ),
+					),
+				),
 				/*'missing_callback'           => array(
 					'name' => '<strong>' . __( 'Missing Callback', self::$plugin_name ) . '</strong>',
 					'type' => 'non-exisit'

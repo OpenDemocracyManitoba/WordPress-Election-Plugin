@@ -183,7 +183,7 @@ function get_candidate_news( $candidate_id ) {
 	
 	$news_query = new WP_Query( $args ); 
 	return array(
-		'count' => $news_query->post_count,
+		'count' => $news_query->found_posts,
 		'articles' => $news_query,
 	);
 	

@@ -1,4 +1,4 @@
-(function($) {
+jQuery(document).ready( function($) {
 	// Backup wordpress inlineEditPost.edit so it can be called from customized function. 
 	var wp_inline_edit = inlineEditPost.edit;
 	inlineEditPost.edit = function( id ) {
@@ -84,7 +84,7 @@
 		wp_inline_save.apply( this, arguments );
 	};
 	
-	$( '#bulk_edit' ).on( 'click', null, null, function() {
+	$( '#bulk_edit' ).click( function() {
 		var bulk_row = $( '#bulk-edit' );
 
 		// get the selected post ids that are being edited
@@ -104,4 +104,4 @@
 			data: ajaxdata
 		});
 	});
-})(jQuery);
+});

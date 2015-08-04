@@ -74,6 +74,13 @@ class Election_Data_Callback_Helper {
 		echo '<hr/>';
 	}
 
+	public function button_callback( $args ) {
+		$options = $args['options']
+		?>
+		<input type='button' id='<?php echo $options['id']; ?>' name='<?php echo $options['id']; ?>' value='<?php echo $options['label']; ?>' />
+		<?php 
+	}
+	
 	/**
 	 * Checkbox Callback
 	 *

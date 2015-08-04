@@ -325,7 +325,7 @@ class Post_Meta {
 	public function enqueue_scripts() {
 		global $current_screen;
 		
-		if ( $current_screen->id == "edit-{$this->post_type}" && !empty( $this->admin_columns ) ) {
+		if ( "edit-{$this->post_type}" == $current_screen->id && !empty( $this->admin_columns ) ) {
 			$script_id = "post-meta-{$this->post_type}";
 			wp_register_script( $script_id, plugin_dir_url( __FILE__ )  . 'js/post-meta.js', array( 'jquery', 'inline-edit-post' ), '', true );
 			$translation_array = array();

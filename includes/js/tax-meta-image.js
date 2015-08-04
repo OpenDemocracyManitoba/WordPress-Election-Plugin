@@ -1,4 +1,4 @@
-jQuery( function( $ ) {
+jQuery(document).ready( function($) {
 	var media_frames = {};
 	for ( var image in tm_image_data ) {
 		var label = tm_image_data[image]
@@ -6,7 +6,7 @@ jQuery( function( $ ) {
 			continue;
 		}
 		
-		$( '#' + label + '_add' ).on( 'click', ( function( label, media_frames, image ) {
+		$( '#' + label + '_add' ).click( ( function( label, media_frames, image ) {
 			return function( event ) {
 				if ( image in media_frames ) {
 					media_frames[image].open();
@@ -21,7 +21,7 @@ jQuery( function( $ ) {
 					multiple: false  // Set to true to allow multiple files to be selected
 				} );
 				
-				media_frames[image].on( 'select', function() {
+				media_frames[image].select( function() {
 					// Get media attachment details from the frame state
 					var attachment = media_frames[image].state().get( 'selection' ).first().toJSON();
 					$( '#' + label + '_img' ).attr( 'src', attachment.url );
@@ -33,7 +33,7 @@ jQuery( function( $ ) {
 				media_frames[image].open();
 			};
 		} )( label, media_frames, image ) );
-		$( '#' + label + '_del' ).on( 'click', ( function( label ) {
+		$( '#' + label + '_del' ).click( ( function( label ) {
 			return function( event ) {
 				event.preventDefault();
 				$( '#' + label + '_img' ).attr( 'src', '' );

@@ -69,26 +69,22 @@ class Election_Data_News_Article {
 			'fields' => array(
 				'url' => array(
 					'label' => __( 'URL' ),
-					'meta_id' => 'url',
+					'id' => 'url',
 					'desc' => __( 'The URL to the news article.' ),
-					'id' => 'news_article_url',
 					'type' => 'url',
 					'std' => '',
 				),
 				'summary' => array(
 					'label' => __( 'Summary ' ),
-					'meta_id' => 'summary',
+					'id' => 'summary',
 					'desc' => __( 'A short summary of the news article.' ),
-					'id' => 'news_article_summary',
 					'type' => 'text',
 					'std' => '',
-					'style' => ''
 				),
 				'source' => array(
 					'label' => __( 'Source' ),
-					'meta_id' => 'source',
+					'id' => 'source',
 					'desc' => __( 'The name of the source web site' ),
-					'id' => 'new_articles_source',
 					'type' => 'text',
 					'std' => '',
 				),
@@ -540,7 +536,7 @@ SQL;
 	}
 	
 	function get_sources() {
-		$parent_ids = $this->get_or_create_parent_taxonomy_terms( $this->taxonomies['source']['name'], array( 'Local', 'Not Local' ) );
+		$parent_ids = $this->get_or_create_parent_taxonomy_terms( $this->taxonomies['source']['name'], array( 'Valid Source', 'Invalid Source', 'Unknown' ) );
 		
 		$all_sources = array();
 		
@@ -581,8 +577,13 @@ SQL;
 		}
 		return $articles;
 	}
+	
+	function ajax_update_news_articles()
+	{
+		$this->update_news_articles( 'ajax' );
+	}
 		
-	function update_news_articles() {
+	function update_news_articles( $mode = 'non-ajax' ) {
 		$references_by_name = $this->update_references();
 		$sources_data = $this->get_sources();
 		$sources = $sources_data['children'];
@@ -594,14 +595,13 @@ SQL;
 			$mentions = $this->get_individual_news_articles( $reference_name );
 			$mentions += $this->get_individual_news_articles( $reference_name, Election_Data_Option::get_option( 'location' ) );
 			foreach ( $mentions as $mention ) {
-				if ( isset( $sources['Not Local'][$mention['base_url']] ) )
-				{
+				if ( isset( $sources['Invalid Source'][$mention['base_url']] ) || isset( $sources['Unknown'][$mention['base_url']] ) ) {
 					continue;
 				}
-				else if ( !isset( $sources['Local'][$mention['base_url']] ) )
+				else if ( !isset( $sources['Valid Source'][$mention['base_url']] ) )
 				{
-					$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source']['name'], array( 'parent' => $source_parents['Not Local'] ) );
-					$sources['Not Local'][$mention['base_url']] = $term['term_id'];
+					$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source']['name'], array( 'parent' => $source_parents['Unknown'] ) );
+					$sources['Unknown'][$mention['base_url']] = $term['term_id'];
 					continue;
 				} 
 				
@@ -620,9 +620,9 @@ SQL;
 					update_post_meta( $article_id, 'url', $mention['url'] );
 					update_post_meta( $article_id, 'summary', $mention['summary'] );
 					update_post_meta( $article_id, 'source', $mention['source'] );
-					wp_set_object_terms( $article_id, $sources['Local'][$mention['base_url']], 'ed_news_articles_source');
+					wp_set_object_terms( $article_id, $sources['Valid Source'][$mention['base_url']], 'ed_news_articles_source');
 				}
-				
+			
 				wp_set_object_terms( $article_id, $reference_id, 'ed_news_articles_reference', true ); 
 			}
 		}
@@ -635,6 +635,8 @@ SQL;
 		$query = new WP_Query( $args );
 		$to_be_updated = array();
 		while ( $query->have_posts() ) {
+			$query->the_post();
+			$article_id = $query->post->ID;
 			if ( count( wp_get_object_terms( $article_id, 'ed_news_articles_reference' ) ) ) {
 				$to_be_updated[] = $article_id;
 			}
@@ -642,6 +644,11 @@ SQL;
 		
 		foreach ( $to_be_updated as $article_id ) {
 			wp_publish_post( $article_id );
+		}
+		
+		if ( $mode == 'ajax' )
+		{
+			wp_die();
 		}
 	}
 	
@@ -726,7 +733,7 @@ SQL;
 		return $new_value;
 	}
 	
-	function define_hooks( )
+	function define_hooks()
 	{
 		add_action( 'admin_init', array( $this, 'admin' ) );
 		add_filter( "manage_edit-{$this->custom_post['name']}_columns", array( $this, 'define_columns' ) );
@@ -745,6 +752,7 @@ SQL;
 		add_action( 'election_data_settings_on_change_time', array( $this, 'change_cron_time' ) );
 		add_action( 'election_data_settings_on_change_frequency', array( $this, 'change_cron_frequency' ) );
 		add_filter( 'election_data_settings_validate_time', array( $this, 'validate_time' ), 10, 3 );
+		add_action( 'wp_ajax_run_news_scrape', array( $this, 'ajax_update_news_articles' ) );
 
 		add_action( 'init', array( $this, 'initialize' ) );
 		add_filter( 'template_include', array( $this, 'include_template_function' ), 1 );

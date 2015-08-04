@@ -258,14 +258,16 @@ class Tax_Meta {
 	}
 	
 	public function save_meta( $term_id ) {
-		$term_meta = get_tax_meta_all( $term_id );
-		foreach ( $this->fields as $field ) {
-			$term_meta[$field['id']] = call_user_func( array( $this, "get_posted_{$field['type']}" ), "{$this->prefix}{$field['id']}" );
+		if ( isset($_POST['action'] ) && ( 'editedtag' == $_POST['action'] || 'add-tag' == $_POST['action'] ) ) {
+			$term_meta = get_tax_meta_all( $term_id );
+			foreach ( $this->fields as $field ) {
+				$term_meta[$field['id']] = call_user_func( array( $this, "get_posted_{$field['type']}" ), "{$this->prefix}{$field['id']}" );
+			}
+			if ( isset( $term_meta['ur'] ) ) {
+				unset( $term_meta['ur'] );
+			}
+			update_tax_meta_all( $term_id, $term_meta );
 		}
-		if ( isset( $term_meta['ur'] ) ) {
-			unset( $term_meta['ur'] );
-		}
-		update_tax_meta_all( $term_id, $term_meta );
 	}
 	
 	public function delete_meta( $term_id, $tt_id, $taxonomy ) {
