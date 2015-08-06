@@ -1,0 +1,311 @@
+html, body, div, span, applet, object, iframe,
+p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+news, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font-family: Verdana, Geneva, "DejaVu Sans", sans-serif;
+	vertical-align: baseline; }
+
+h1, h2, h3, h4, h5, h6 {
+	margin: 0 0 0.5em 10px;
+	padding: 0;
+	border: 0;
+	vertical-align: baseline;
+	font-family: Georgia, "Bitstream Charter", serif; }
+	h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
+		font-family: Georgia, "Bitstream Charter", serif; }
+
+footer, header, hgroup, menu, nav, section {
+	display: block; }
+
+body {
+	line-height: 1;
+	font-size: 14px;
+	-webkit-text-size-adjust: 100%;
+	-ms-text-size-adjust: none; }
+
+table {
+	border-collapse: collapse;
+	border-spacing: 0; }
+
+a {
+	color: #3b59bb;
+	text-decoration: none; }
+	a img {
+		border: none; }
+
+p {
+	margin-bottom: 1em;
+	margin-left: 10px; }
+
+a:hover {
+	text-decoration: underline; }
+
+#container {
+	  width: 960px;
+	  margin: 0 auto; }
+
+#main {
+	margin-top: 1em; }
+	#main h2.title {
+		margin-top: 10px; }
+
+.hidden {
+	display: none; }
+		
+
+		
+.flow_it {
+	  width: 100%;
+	  overflow: hidden;
+	  zoom: 1;
+	  margin-bottom: 1em; }
+  
+.one_column, .two_columns, .three_columns, .two_columns_early_shrink {
+	-o-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-icab-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-khtml-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-moz-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-webkit-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	margin: 10px;
+	border: 1px solid #e4e4e4;
+	padding: 10px;
+	float: left;
+	background-color: #eeeeee;
+	color: #333333;
+	line-height: 1.3; }
+	.one_column p, .two_columns p, .three_columns p, .two_columns_early_shrink p {
+		margin-bottom: 1em;
+		margin-left: 0; }
+	.one_column ul, .one_column ol, .two_columns ul, .two_columns ol, .three_columns ul, .three_columns ol, .two_columns_early_shrink ul, .two_columns_early_shrink ol {
+		margin-left: 2em;
+		margin-bottom: 1em; }
+	.one_column h1, .one_column h2, .one_column h3, .one_column h4, .two_columns h1, .two_columns h2, .two_columns h3, .two_columns h4, .three_columns h1, .three_columns h2, .three_columns h3, .three_columns h4, .two_columns_early_shrink h1, .two_columns_early_shrink h2, .two_columns_early_shrink h3, .two_columns_early_shrink h4 {
+		margin-bottom: 1em;
+		margin-left: 0; }
+
+.three_columns {
+	width: 918px; }
+
+.two_columns {
+	width: 598px; }
+
+.two_columns_early_shrink {
+	width: 598px; }
+
+.one_column {
+	width: 278px; }
+
+.two_column_flow {
+	width: 640px;
+	float: left; }
+
+.one_column_flow {
+	width: 320px;
+	float: left; }
+
+.medium_row {
+	height: 350px; }
+
+.short_row {
+	height: 235px; }
+
+p.news-article-notice{
+	color: #666666;
+	font-size: 0.9em;
+	margin-bottom: 20px;
+	margin-top: -10px; }
+	
+.news-article {
+	margin-bottom: 2em; }
+	.news-article h3 {
+		margin-bottom: 5px; }
+	.news-article .date {
+		font-size: 0.75em;
+		margin-bottom: 1.1em; }
+	.news-article .summary {
+		font-size: 0.9em; }
+	.news-article .summary, .news-article .summary b, .news-article .summary em, .news-article .date {
+		font-family: Georgia, "Bitstream Charter", serif; }
+
+.politician, .party {
+	position: relative;
+	-o-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-icab-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-khtml-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-moz-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	-webkit-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	margin: 10px;
+	width: 288px;
+	border: 1px solid #e4e4e4;
+	min-height: 170px;
+	padding-left: 10px;
+	background-color: #eeeeee;
+	float: left; }
+	.politician div, .party div {
+		margin-left: 0;
+		color: #333333; }
+
+.constituency {
+	margin-top: 10px; }
+	
+		
+.politician .name {
+	margin: 1em 0;
+	font-size: 11.5px; }
+
+.party .name {
+	margin: 1em 0;
+    font-weight: bold;
+    font-size: 1.2em; }
+	
+.election-website, .website {
+	color: #999999;
+	font-size: 0.8em;
+	margin: 1em 0; }
+
+.phone, .candidate-party, .news, .address {
+	font-size: 0.75em;
+	margin-bottom: 0.7em; }
+	
+.since {
+	font-size: 0.75em;
+	margin-top: 0;
+	margin-bottom: 0;}
+
+.politician .image, .party .image {
+	-o-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3);
+	-icab-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3);
+	-khtml-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3);
+	-moz-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3);
+	-webkit-box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3);
+	box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.3);
+	position: absolute;
+	top: 0;
+	right: 0;
+	text-align: center;
+	width: 117px;
+	background-color: #dbdbda;
+	padding: 4px 0 2px 0; }
+	.politician .image .leader {
+		margin: 0;
+		font-size: 0.8em;
+		font-weight: bold; }
+	.politician .image img, .party .image img {
+		height: 104px; }		
+
+.politician .icons, .party .icons {
+	margin-bottom: 10px; }
+
+.politician .icons a img, .party .icons a img {
+	border-bottom: 2px solid #3b59bb; }
+
+.parties .party {
+	min-height: 208px; }
+	.parties .party .image {
+		width: 150px;
+		height: 95px; }
+	.parties .party .image img {
+		height: 90px;
+		max-width: 93%; }
+	.parties .party div.icons {
+		margin-bottom: 1.6em; }
+	.parties .party div.name {
+		font-weight: bold;
+		font-size: 1.2em;
+		width: 130px; }
+	.parties .party div.name a {
+		font-weight: bold;
+		font-size: 100%; }
+	
+	
+#main {
+	position: relative; }
+
+@media all and (max-width: 959px) {
+	header {
+		padding-top: 1em;
+		height: 100px; }
+		header h1 {
+		margin-top: 0.5em; }
+
+	#container {
+		width: 640px; }
+
+	.three_columns {
+		width: 598px; }
+
+	.two_columns_early_shrink {
+		width: 278px; } }
+		
+@media all and (max-width: 639px) {
+	header {
+		padding-top: 0.5em;
+		height: auto; }
+	header h1 {
+		margin-top: 0;
+		font-size: 2.7em; }
+	header h3 {
+		font-size: 1.03em; }
+
+	#container {
+		width: 320px; }
+
+	.three_columns, .two_columns {
+		width: 278px; }
+
+	.two_column_flow {
+		width: 320px; }
+
+	.visible_block_when_mobile {
+		display: block; }
+
+	.hidden_block_when_mobile {
+		display: none; } }
+		
+.latest_news_small h4, .latest_news_large h4 {
+  color: #666666; }
+.latest_news_small span.source, .latest_news_large span.source {
+  color: #444444;
+  font-size: 0.8em; }
+.latest_news_small ul, .latest_news_large ul {
+  list-style: none;
+  margin-left: 0; }
+  .latest_news_small ul li, .latest_news_large ul li {
+    border-bottom: 1px solid #dddddd; }
+.latest_news_small p.link, .latest_news_large p.link {
+  margin-bottom: 0; }
+
+.latest_news_small ul, .latest_news_small p.more {
+  font-size: 12px; }
+.latest_news_small ul li {
+  margin-bottom: 5px; }
+.latest_news_small p.date {
+  color: #666666;
+  margin-bottom: 5px;
+  font-size: 11px; }
+.latest_news_small p.mentions {
+  color: #888888;
+  font-size: 10px; }
+
+.latest_news_large ul {
+  font-size: 13px; }
+  .latest_news_large ul li {
+    margin-bottom: 10px; }
+.latest_news_large p.mentions {
+  color: #888888;
+  font-size: 11px; }

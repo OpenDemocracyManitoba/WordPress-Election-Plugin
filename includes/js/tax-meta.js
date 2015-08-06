@@ -1,5 +1,34 @@
 jQuery(document).ready( function($) {
-	var x = $( '#addtag' );
+	// Hides the fields in the edit screen.
+	for ( var field in tm_remove_fields ) {
+		if ( !tm_remove_fields.hasOwnProperty( field ) ) {
+			continue;
+		}
+
+		if ( tm_data['mode'] == 'add' ) {
+			query = ' .form-field label:contains("' + field + '")';
+		} else {
+			query = ' .form-field th:contains("' + field + '")';
+		}
+		var x = $( query );
+		switch ( field ) {
+			case 'Name':
+			case 'Slug':
+			case 'Parent':
+			case 'Description':
+				if ( tm_data['mode'] == 'add' ) {
+					$( query ).each( function( i ) {
+						$( this ).parent().hide();
+					} );
+				} else {
+					$( query ).each( function( i ) {
+						$( this ).parent().hide();
+					} );
+				}
+				break;
+				
+		}
+	}
 	
 	$( document ).ajaxComplete(function( event, xhr, settings ) {
       try{

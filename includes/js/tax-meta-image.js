@@ -21,7 +21,7 @@ jQuery(document).ready( function($) {
 					multiple: false  // Set to true to allow multiple files to be selected
 				} );
 				
-				media_frames[image].select( function() {
+				media_frames[image].on( 'select', function() {
 					// Get media attachment details from the frame state
 					var attachment = media_frames[image].state().get( 'selection' ).first().toJSON();
 					$( '#' + label + '_img' ).attr( 'src', attachment.url );

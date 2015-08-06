@@ -283,6 +283,13 @@ class Election_Data_Candidate {
 						'label' => __( 'Coordinates' ),
 						'std' => '',
 					),
+					array(
+						'type' => 'wysiwyg',
+						'id' => 'details',
+						'desc' => __( 'A description of the constituency. ' ),
+						'label' => __( 'Details' ),
+						'std' => '',
+					),
 				),
 			),
 		);
@@ -294,7 +301,7 @@ class Election_Data_Candidate {
 		);
 		
 		foreach ( $taxonomy_meta as $name => $tax_meta_config ) {
-			$tax_meta = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'] );
+			$tax_meta = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'], array( 'Description', ) );
 		}
 	}
 	
@@ -354,27 +361,27 @@ class Election_Data_Candidate {
 	// Identifies the sortable columns in the administrative interface.
 	function sort_columns( $columns ) {
 		foreach ( $this->taxonomies as $taxonomy ) {
-			$columns['taxonomy-' . $taxonomy['name']] = 'taxonomy-' . $taxonomy['name'];
+			$columns["taxonomy-{$taxonomy['name']}"] = "taxonomy-{$taxonomy['name']}";
 		}
 		
 		return $columns;
 	}
 
-	// Changes search query for taxonomies so that custom posts without the taxonomy are included in the results when sorting by a taxonomy.
+	// Changes search query for taxonomies so that posts can be sorted by taxonomy.
 	function taxonomy_clauses( $clauses, $wp_query ) {
 		global $wpdb;
 		if ( isset( $wp_query->query['orderby'] ) ) {
 			foreach ( $this->taxonomies as $taxonomy ) {
-				if ( $taxonomy['name'] == $wp_query->query['orderby'] ) {
+				if ( "taxonomy-{$taxonomy['name']}" == $wp_query->query['orderby'] ) {
 					$clauses['join'] .= <<<SQL
-LEFT OUTER JOIN {$wpdb->term_relationships} ON {$wpdb->posts}.ID={$wpdb->term_relationships}.object_id
-LEFT OUTER JOIN {$wpdb->term_taxonomy} USING (term_taxonomy_id)
-LEFT OUTER JOIN {$wpdb->terms} USING (term_id)
+LEFT OUTER JOIN {$wpdb->term_relationships} tr2 ON {$wpdb->posts}.ID=tr2.object_id
+LEFT OUTER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id
+LEFT OUTER JOIN {$wpdb->terms} t2 on tt2.term_id = t2.term_id
 SQL;
 
-					$clauses['where'] .= " AND (taxonomy = '" . substr( $wp_query->query['orderby'], 9 ) . "' OR taxonomy IS NULL)";
-					$clauses['groupby'] = "object_id";
-					$clauses['orderby']  = "GROUP_CONCAT({$wpdb->terms}.name ORDER BY name ASC) ";
+					$clauses['where'] .= " AND (tt2.taxonomy = '" . $taxonomy['name'] . "' OR tt2.taxonomy IS NULL)";
+					$clauses['groupby'] = "tr2.object_id";
+					$clauses['orderby']  = "GROUP_CONCAT(t2.name ORDER BY name ASC) ";
 					$clauses['orderby'] .= ( 'ASC' == strtoupper( $wp_query->get( 'order' ) ) ) ? 'ASC' : 'DESC';
 				}
 			}

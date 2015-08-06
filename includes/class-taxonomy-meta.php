@@ -47,10 +47,11 @@ class Tax_Meta {
 	 * @param array $fields
 	 *
 	 */
-	public function __construct( $taxonomy, $fields ) {
+	public function __construct( $taxonomy, $fields, $hidden = array() ) {
 		$this->fields = $fields;
 		$this->taxonomy = $taxonomy;
 		$this->prefix = "tm_{$taxonomy}_";
+		$this->hidden = $hidden;
 		
 		add_action( 'delete_term', array( $this, 'delete_meta'), 10, 3 );
 		add_action( "{$taxonomy}_add_form_fields", array( $this, 'add_form_fields' ) );
@@ -67,15 +68,22 @@ class Tax_Meta {
 		if ( $taxonomy == $this->taxonomy ) {
 			$script_id = "tax-meta-$taxonomy";
 			wp_register_script( $script_id, plugin_dir_url( __FILE__ ) . 'js/tax-meta.js', array( 'jquery' ), '', true );
-			$translation_array = array( 'prefix', $this->prefix );
+			$translation_array = array(
+				'mode' => isset( $_REQUEST['action'] ) && $_REQUEST['action'] == 'edit' ? 'edit' : 'add',
+			);
 			wp_localize_script( $script_id, 'tm_data', $translation_array );
+			$translation_array = array();
+			foreach ( $this->hidden as $field )
+			{
+				$translation_array[$field] = $field;
+			}
+			wp_localize_script( $script_id, 'tm_remove_fields', $translation_array );
 			wp_enqueue_script( $script_id );
 			if ( $this->has_type( 'image' ) )
 			{
 				$script_id = "tax-meta-image-$taxonomy";
 				wp_register_script( $script_id, plugin_dir_url( __FILE__ ) . 'js/tax-meta-image.js', array( 'jquery', 'media-upload', 'thickbox' ), '', true );
 				$translation_array = array();
-				
 				foreach ( $this->fields as $field ) {
 					if ( $field['type'] == 'image' )
 					{
@@ -85,9 +93,6 @@ class Tax_Meta {
 				
 				wp_localize_script( $script_id, 'tm_image_data', $translation_array );
 				wp_enqueue_script( $script_id );
-				wp_enqueue_script( 'jquery-ui-core' );
-				wp_enqueue_script( 'jquery-ui-sortable' );
-				wp_enqueue_style( 'thickbox' );
 				wp_enqueue_media();
 			}
 		}
@@ -108,15 +113,15 @@ class Tax_Meta {
 	
 	public function add_form_fields( $term_name )
 	{
-		$this->show_form_fields( '', 'add' );
+		$this->form_fields( '', 'add' );
 	}
 	
 	public function edit_form_fields( $term )
 	{
-		$this->show_form_fields( $term->term_id, 'edit' );
+		$this->form_fields( $term->term_id, 'edit' );
 	}
 	
-	protected function show_field_label( $field, $mode ) {
+	protected function display_field_label( $field, $mode ) {
 		if ( $mode == 'edit' ) {
 			$header = '<th scope="row">';
 			$footer = '</th>';
@@ -129,13 +134,31 @@ class Tax_Meta {
 		echo "$header<label for='$id'>$label</label>$footer";
 	}
 	
+	protected function show_wysiwyg( $field, $mode, $value ) {
+		if ( $mode == 'edit' ) {
+			$header = '<td>';
+			$footer = '</td></tr>';
+			$value = $value ? $value : $field['std'];
+			echo '<tr class="form-field">';
+		} else {
+			$header = '<div class="form-field">';
+			$footer = '</div>';
+			$value = $field['std'];
+		}
+		$this->display_field_label( $field, $mode );
+		echo $header;
+		wp_editor( $value, esc_attr( "{$this->prefix}{$field['id']}" ) );
+		$desc = esc_html( $field['desc'] );
+		echo "<p>$desc</p>$footer";
+	}
+	
 	protected function show_image( $field, $mode, $value )
 	{
 		if ($mode == 'edit' )
 		{
 			$header = '<td>';
 			$footer = '</td></tr>';
-			if ( isset( $value['id'] ) ) {
+			if ( !empty( $value['id'] ) ) {
 				$image_id = esc_attr($value['id']);
 				$image_url = esc_url(wp_get_attachment_url( $image_id ));
 				$add_class = 'class="hidden"';
@@ -146,18 +169,18 @@ class Tax_Meta {
 				$add_class = '';
 				$del_class = 'class="hidden"';
 			}
-			echo '<tr>';
+			echo '<tr class="form-field">';
 		} else {
-			$header = '';
-			$footer = '';
+			$header = '<div class="form-field">';
+			$footer = '</div>';
 			$image_id = '';
 			$image_url = '';
 			$add_class = '';
 			$del_class = 'class="hidden"';
 		}
-		$this->show_field_label( $field, $mode );
+		$this->display_field_label( $field, $mode );
 		$id = esc_attr( "{$this->prefix}{$field['id']}" );
-		$desc = $field['desc'];
+		$desc = esc_html( $field['desc'] );
 		echo "$header<img id='{$id}_img' src='$image_url' style='max-width:100%'/>";
 		echo "<input type='hidden' name='$id' id='$id' value='$image_id' />";
 		echo "<br><input type='button' id='{$id}_add' name='{$id}_add' value='Select Image' $add_class/>";
@@ -175,11 +198,11 @@ class Tax_Meta {
 		}
 		else
 		{
-			$header = '';
-			$footer = '';
+			$header = '<div class="form-field">';
+			$footer = '</div>';
 			$value = esc_attr( $field['std'] );
 		}
-		$this->show_field_label( $field, $mode );
+		$this->display_field_label( $field, $mode );
 		$id = esc_attr( "{$this->prefix}{$field['id']}" );
 		$desc = $field['desc'];
 		echo "$header<input type='$type' id='$id' name='$id' value='$value'/><p>$desc</p>$footer";
@@ -195,8 +218,8 @@ class Tax_Meta {
 		}
 		else
 		{
-			$header = '';
-			$footer = '';
+			$header = '<div class="form-field">';
+			$footer = '</div>';
 			$value = esc_attr( $field['std'] );
 		}
 		$id = esc_attr( "{$this->prefix}{$field['id']}" );
@@ -215,21 +238,15 @@ class Tax_Meta {
 		$this->show_text( $field, $mode, $value, 'color' );
 	}
 	
-	protected function show_form_fields( $term_id, $mode ) {
+	protected function form_fields( $term_id, $mode ) {
 		if ( $mode == 'edit' ) {
-			$header = '';
-			$footer = '';
 			$values = get_tax_meta_all( $term_id );
 		} else {
-			$header = '<div class="form-field">';
-			$footer = '</div>';
 			$values = array();
 		}
-		echo $header;
 		foreach ( $this->fields as $field ) {
 			call_user_func( array( $this, "show_{$field['type']}" ), $field, $mode, isset( $values[$field['id']] ) ? $values[$field['id']] : '' );
 		}
-		echo $footer;
 	}
 	
 	protected function get_posted_text( $field_id ) {
@@ -237,24 +254,28 @@ class Tax_Meta {
 	}
 	
 	protected function get_posted_url( $field_id ) {
-		return $this->get_posted_text( $field_id );
+		return $_POST[$field_id];
 	}
 	
 	protected function get_posted_email( $field_id ) {
-		return $this->get_posted_text( $field_id );
+		return $_POST[$field_id];
 	}
 	
 	protected function get_posted_color( $field_id ) {
-		return $this->get_posted_text( $field_id );
+		return $_POST[$field_id];
 	}
 	
 	protected function get_posted_hidden( $field_id ) {
-		return $this->get_posted_text( $field_id );
+		return $_POST[$field_id];
 	}
 	
 	protected function get_posted_image( $field_id ) {
 		$id = $_POST[$field_id];
 		return array( 'id' => $id, 'url' => wp_get_attachment_url( $id ) );
+	}
+	
+	protected function get_posted_wysiwyg( $field_id ) {
+		return stripslashes( $_POST[$field_id] );
 	}
 	
 	public function save_meta( $term_id ) {
@@ -263,9 +284,7 @@ class Tax_Meta {
 			foreach ( $this->fields as $field ) {
 				$term_meta[$field['id']] = call_user_func( array( $this, "get_posted_{$field['type']}" ), "{$this->prefix}{$field['id']}" );
 			}
-			if ( isset( $term_meta['ur'] ) ) {
-				unset( $term_meta['ur'] );
-			}
+
 			update_tax_meta_all( $term_id, $term_meta );
 		}
 	}

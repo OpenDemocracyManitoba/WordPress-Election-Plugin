@@ -607,6 +607,9 @@ SQL;
 				
 				if ( isset( $articles_by_url[$mention['url']] ) ) {
 					$article_id = $articles_by_url[$mention['url']];
+					$summaries = get_post_meta( $article_id, 'summaries', true );
+					$summaries[$reference_id] = $mention['summary'];
+					update_post_meta( $article_id, 'summaries', $summaries );
 				}
 				else {
 					$post = array(
@@ -618,7 +621,8 @@ SQL;
 					
 					$article_id = wp_insert_post( $post );
 					update_post_meta( $article_id, 'url', $mention['url'] );
-					update_post_meta( $article_id, 'summary', $mention['summary'] );
+					update_post_meta( $article_id, 'summary', wp_strip_all_tags( $mention['summary'] ) );
+					update_post_meta( $article_id, 'summaries', array( $reference_id => $mention['summary'] ) );
 					update_post_meta( $article_id, 'source', $mention['source'] );
 					wp_set_object_terms( $article_id, $sources['Valid Source'][$mention['base_url']], 'ed_news_articles_source');
 				}
