@@ -63,10 +63,6 @@ function get_party( $party_id, $get_extra_data = true ) {
 	global $party_name;
 	$all_terms = get_terms( $party_name, array( 'include' => $party_id, 'hide_empty' => false ) );
 	$party_terms = $all_terms[0];
-	error_log( print_r( $party_id, true ) );
-	error_log( print_r( $get_extra_data, true ) );
-	error_log( print_r( $all_terms, true ) );
-	error_log( print_r( $party_name, true ) );
 	
 	$results = array(
 		'name' => $party_terms->name,
@@ -121,10 +117,19 @@ function get_party( $party_id, $get_extra_data = true ) {
 function get_party_from_candidate( $candidate_id ) {
 	global $party_name;
 	$all_terms = get_the_terms( $candidate_id, $party_name );
-	$party_terms = $all_terms[0];
-	$party_id = $party_terms->term_id;
-
-	return get_party( $party_id, false );
+	if ( isset( $all_terms[0] ) ) {
+		$party_terms = $all_terms[0];
+		$party_id = $party_terms->term_id;
+		return get_party( $party_id, false );
+	} else {
+		return array(
+			'name' => '',
+			'colour' => '0x000000',
+			'url' => '',
+			'long_title' => '',
+			'reference_id' => '',
+		);
+	}
 }
 
 function get_candidate( $candidate_id ) {
@@ -208,7 +213,6 @@ function display_news_titles ( $news ) {
 	if ( $articles->have_posts() ) :
 		while ( $articles->have_posts() ) :
 			$articles->the_post();
-			error_log( print_r( $articles->post, true ) );
 			$article_id = $articles->post->ID;
 			$date = get_the_date( 'l, j, F Y', $article_id );
 			if ( $date != $last_date ) :
@@ -226,17 +230,14 @@ function display_news_titles ( $news ) {
 				$reference_id = get_tax_meta( $reference->term_id, 'reference_post_id' );
 				switch ( get_tax_meta( $reference->parent, 'reference_post_id' ) ) :
 					case $party_name:
-						error_log( print_r( get_term_link( $reference_id, $party_name ), true ) );
 						$url = get_term_link( $reference_id, $party_name );
 						break;
 					case $candidate_name:
-						error_log( print_r( get_permalink( $reference_id ), true ) );
 						$url = get_permalink( $reference_id );
 						break;
 					default:
 						$url = '';
 				endswitch;
-				error_log( $url );
 				$name = esc_attr( $reference->name );
 				$mentions[] = "<a href='$url'>$name</a>";
 			endforeach; ?>

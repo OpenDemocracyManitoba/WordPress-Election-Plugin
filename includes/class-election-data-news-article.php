@@ -23,6 +23,8 @@
 
 require_once plugin_dir_path( __FILE__ ) . 'class-post-meta.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-taxonomy-meta.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-post-import.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-post-export.php';
 
 class Election_Data_News_Article {
 	// Definition of the custom post type.
@@ -613,10 +615,10 @@ SQL;
 					$post = array(
 						'post_title' => $mention['title'],
 						'post_status' => $mention['published'],
+						'post_name' => sanitize_title( $mention['title'] ),
 						'post_type' => 'ed_news_articles',
 						'post_date' => $mention['publication_date']
 					);
-					
 					$article_id = wp_insert_post( $post );
 					update_post_meta( $article_id, 'url', $mention['url'] );
 					update_post_meta( $article_id, 'summary', wp_strip_all_tags( $mention['summary'] ) );
@@ -638,7 +640,7 @@ SQL;
 		while ( $query->have_posts() ) {
 			$query->the_post();
 			$article_id = $query->post->ID;
-			if ( count( wp_get_object_terms( $article_id, 'ed_news_articles_reference' ) ) ) {
+			if ( count( wp_get_object_terms( $article_id, 'ed_news_articles_reference' ) ) > 1 ) {
 				$to_be_updated[] = $article_id;
 			}
 		}
@@ -761,114 +763,33 @@ SQL;
 	
 	function export_xml( $xml ) {
 	}
-	
-	function write_csv( $file, $post_fields, $meta_fields ) {
-		$data = array();
-		
-		foreach ( $post_fields as $field )
-		{
-			$data[] = $field;
-		}
-		
-		foreach ( $meta_fields as $field )
-		{
-			$data[] = $field;
-		}
-		
-		fputcsv( $file, $data );
-	}
-	
-	function export_news_article_csv( $file ) {
+
+	function export_news_article_csv( $csv ) {
 		$post_fields = array(
 			'post_title' => 'title',
 			'post_date' => 'date',
 			'post_name' => 'slug',
+			'post_status' => 'status',
 		);
 		
-		$meta_fields = $this->post_meta->get_field_names();
-		$this->write_csv( $file, $post_fields, $meta_fields );
+		$taxonomies = array( $this->taxonomies['source']['name'] => 'source' );
 		
-		$args = array(
-			'post_type' => $this->custom_post['name'],
-			'orderby' => 'name',
-			'order' => 'ASC',
-		);
-		$query = new WP_Query( $args );
-		while ( $query->have_posts() ) {
-			$query->the_post();
-			$post_data = array();
-			foreach ( $post_fields as $field => $label )
-			{
-				if ( 'image' == $field )
-				{
-					$image_id = get_post_thumbnail_id( $query->post->ID );
-					if ( $image_id ){
-						$image_meta = wp_get_attachment_metadata( $image_id );
-						$upload_dir = wp_upload_dir();
-						$image_filename = "{$upload_dir['basedir']}/{$image_meta['file']}";
-						$post_data[] = base64_encode( file_get_contents( $image_filename ) );
-					} else {
-						$post_data[] = '';
-					}
-				} else {
-					$post_data[] = $query->post->$field;
-				}
-			}
-			
-			$taxonomy_data = array();
-
-			$meta_data = $this->post_meta->get_field_values( $query->post->ID );
-			
-			$this->write_csv( $file, $post_data, $meta_data );
-		}
+		Post_Export::export_post_csv( $csv, $this->custom_post['name'], $this->post_meta, $post_fields, '', $taxonomies );
 	}
 	
-	function export_taxonomy ( $file, $taxonomy, $taxonomy_fields, $type, $write_headings )
-	{
-		if ( isset( $taxonomy_meta[$taxonomy] ) ) {
-			$taxonomy_meta = $this->taxonomy_meta[$taxonomy];
-		}
-		if ( $write_headings ) {
-			$meta_fields = isset( $taxonomy_meta ) ? $taxonomy_meta->get_field_names() : array();
-
-			call_user_func( array($this, "write_$type") , $file, $taxonomy_fields, $meta_fields );
-		}
-		
-		$args = array(
-			'hide_empty' => false,
-			'fields' => 'all',
-			'orderby' => 'name',
-			'order' => 'ASC'
-		);
-		$terms = get_terms( $this->taxonomies[$taxonomy]['name'], $args );
-		foreach ( $terms as $term ) {
-			$taxonomy_data = array();
-			foreach ( $taxonomy_fields as $field )
-			{
-				if ( 'parent' == $field ) {
-					$parent = $term->parent ? get_term( $term->parent, $this->taxonomies[$taxonomy]['name'] ) : '';
-					$taxonomy_data[] = $parent ? $parent->slug : '';
-				} else {
-					$taxonomy_data[] = $term->$field;
-				}
-			}
-			
-			$meta_data = isset( $taxonomy_meta ) ? $taxonomy_meta->get_field_values( $term->term_id) : array();
-			call_user_func( array( $this, "write_$type" ), $file, $taxonomy_data, $meta_data );
-		}		
-	}
-	
-	function export_news_source_csv( $file ) {
+	function export_news_source_csv( $csv ) {
 		$source_fields = array( 'name', 'slug', 'description', 'parent' );
-		$this->export_taxonomy( $file, 'source', $source_fields, 'csv', true );
+		Post_Export::export_taxonomy_csv( $csv, 'source', $this->taxonomies['source']['name'], $source_fields, null, 0 );
 	}
 	
-	function export_news_mention_csv ( $file ) {
+	function export_news_mention_csv ( $csv ) {
 		$headings = array( 'news_article', 'mention_type', 'mention' );
-		$this->write_csv( $file, $headings, array() );
+		$headings_data = array_combine( $headings, $headings );
+		Post_Export::write_csv_row( $csv, $headings_data, $headings );
 		
 		$args = array(
 			'post_type' => $this->custom_post['name'],
+			'post_status' => array ( 'any', 'trash' ),
 			'orderby' => 'name',
 			'order' => 'ASC',
 		);
@@ -889,16 +810,88 @@ SQL;
 				$parent_type = $parent_ids[$term->parent];
 				if ( 'Party' == $parent_type ) {
 					$party = get_term( $reference, 'ed_candidates_party' );
-					$data = array( $query->post->post_name, $parent_type, $party->slug );
+					$mention = $party->slug;
 				}
 				elseif ( 'Candidate' == $parent_ids[$term->parent] ) {
 					$candidate = get_post( $reference );
-					$data = array( $query->post->post_name, $parent_type, $candidate->post_name );
+					$mention = $candidate->post_name;
 				}
+				$data = array(
+					'news_article' => $query->post->post_name,
+					'mention_type' => $parent_type,
+					'mention' => $mention ,
+				);
 			}
 			
-			$this->write_csv( $file, $data, array() );
+			Post_Export::write_csv_row( $csv, $data, $headings );
 		}
+	}
+	
+	function import_news_article_csv( $csv, $mode ) {
+		$post_fields = array(
+			'post_title' => 'title',
+			'post_date' => 'date',
+			'post_name' => 'slug',
+			'post_status' => 'status',
+		);
+		
+		$taxonomies = array( $this->taxonomies['source']['name'] => 'source' );
+		return Post_Import::import_post_csv( $csv, $mode, $this->custom_post['name'], $this->post_meta, $post_fields, '', $taxonomies );
+	}
+	
+	function import_news_source_csv( $csv, $mode ) {
+		$source_fields = array( 'name', 'slug', 'description' );
+		$parent_field = 'parent';
+		return Post_Import::import_taxonomy_csv( $csv, $mode, 'source', $this->taxonomies['source']['name'], $source_fields, null, $parent_field );
+	}
+	
+	function import_news_mention_csv ($csv, $mode ) {
+		$headings = fgetcsv( $csv );
+		$found = true;
+		$fields = array( 'news_article', 'mention_type', 'mention' );
+		foreach ( $fields as $field ) {
+			$found &= in_array( $field, $headings );
+		}
+		
+		if ( !$found ) {
+			return false;
+		}
+		
+		$this->update_references();
+		$current_articles = Post_Import::get_current_posts( $this->custom_post['name'] );
+		$current_candidates = Post_Import::get_current_posts( 'ed_candidates' );
+		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
+			$data = array_combine( $headings, $data );
+			if ( isset( $current_articles['post_name'][$data['news_article']] ) ) {
+				$article = $current_articles['post_name'][$data['news_article']];
+			} elseif ( isset( $current_articles['post_title'][$data['news_article']] ) ) {
+				$article = $current_articles['post_title'][$data['news_article']];
+			}
+			if ( $data['mention_type'] == 'Party' )
+			{
+				$term = get_term_by( 'slug', $data['mention'], 'ed_candidates_party' );
+				if ( !$term ) {
+					$term = get_term_by( 'name', $data['mention'], 'ed_candidates_party' );
+				}
+				if ( $term ) {
+					$reference = get_tax_meta( $term->term_id, 'reference' );
+				}
+			} elseif ( $data['mention_type'] == 'Candidate' )
+			{
+				if ( isset( $current_candidates['post_name'][$data['mention']] ) ) {
+					$candidate = $current_candidates['post_name'][$data['mention']];
+				} elseif ( isset( $current_candidates['post_title'][$data['mention']] ) ) {
+					$candidate = $current_candidates['post_title'][$data['mention']];
+				}
+				if ( isset( $candidate ) ) {
+					$reference = get_post_meta( $candidate->ID, 'reference', true );
+				}
+			}
+			if ( isset( $article ) && isset( $reference ) ) {
+				wp_set_object_terms( $article->ID, (int)$reference, $this->taxonomies['reference']['name'], true );
+			}	
+		}
+		return true;
 	}
 	
 	function export_csv ( $type ) {
@@ -911,7 +904,7 @@ SQL;
 	}
 	
 	function import_csv( $type, $csv, $mode ) {
-		return true;
+		return call_user_func( array( $this, "import_{$type}_csv" ), $csv, $mode );
 	}
 	
 	function erase_data()

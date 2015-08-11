@@ -255,16 +255,13 @@ class Election_Data {
 		$news_article = new Election_Data_News_Article( false );
 		
 		$file_name = $file_data['tmp_name'];
-		error_log( "importing: $file_type" . print_r( $file_data, true ) );
 
 		switch ( $file_type ) {
 			case 'xml':
 				$success = true;
-				error_log( "XML chosen: $file_name" );
 				break;
 			case 'csv_zip':
 				$success = true;
-				error_log( "ZIP chosen: $file_name" );
 				$zip = new ZipArchive();
 				$zip->open( $file_name );
 				$types = array( 'party', 'constituency', 'candidate' );
@@ -284,7 +281,6 @@ class Election_Data {
 			case 'csv_candidate':
 			case 'csv_party':
 			case 'csv_constituency':
-				error_log( "Candidate: $file_type chosen: $file_name" );
 				$type = substr( $file_type, 4 );
 				$csv = fopen( "$file_name", 'r');
 				$success = $candidate->import_csv( $type, $csv, $mode );
@@ -292,7 +288,6 @@ class Election_Data {
 			case 'csv_news_source':
 			case 'csv_news_article':
 			case 'csv_news_mention':
-				error_log( "News Article: $file_type chosen: $file_name" );
 				$type = substr( $file_type, 4 );
 				$csv = fopen( "$file_name", 'r');
 				$success = $news_article->import_csv( $type, $csv, $mode );

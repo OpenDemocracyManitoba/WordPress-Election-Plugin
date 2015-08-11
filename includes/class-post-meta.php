@@ -221,7 +221,6 @@ class Post_Meta {
 			// Also skip the field if it is empty (false) and skip_empty is true.
 			if ( isset( $_POST[$this->prefix . $field['id']] ) && ( !$skip_empty || $_POST[$this->prefix . $field['id']] ) ) {
 				$new = $_POST[$this->prefix . $field['id']];
-				error_log( "{$field['id']}: $new" );
 				update_post_meta( $post_id, stripslashes( $field['id'] ), $new );
 			}
 		}
@@ -488,9 +487,9 @@ class Post_Meta {
 		foreach ( $this->fields as $field ) {
 			if ( isset( $field['label'] ) ) {
 				if ( isset( $meta_values[$field['id']] ) && isset( $meta_values[$field['id']][0] ) ) {
-					$values[] = $meta_values[$field['id']][0];
+					$values[$field['id']] = $meta_values[$field['id']][0];
 				} else {
-					$values[] = '';
+					$values[$field['id']] = '';
 				}
 			}
 		}
