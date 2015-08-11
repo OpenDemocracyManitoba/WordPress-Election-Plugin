@@ -8,7 +8,7 @@ $source_name = "{$news_article_name}_source";
 wp_enqueue_style( "ed_style", plugin_dir_url( __FILE__ ) . 'css/application.css' );
 
 function get_constituency( $constituency_id, $get_extra_data = true ) {
-	global $constituency_name;//, $constituency_perma_link;
+	global $constituency_name;
 	$all_terms = get_terms( $constituency_name, array( 'include' => $constituency_id, 'hide_empty' => false ) );
 	$constituency_terms = $all_terms[0];
 	$results = array(
@@ -46,14 +46,27 @@ function get_constituency( $constituency_id, $get_extra_data = true ) {
 function get_constituency_from_candidate( $candidate_id ) {
 	global $constituency_name;
 	$all_terms = get_the_terms( $candidate_id, $constituency_name );
-	$constituency_terms = $all_terms[0];
-	return get_constituency( $constituency_terms->term_id, false );
+	if ( isset( $all_terms[0] ) ) {
+		$constituency_terms = $all_terms[0];
+		return get_constituency( $constituency_terms->term_id, false );
+	} else {
+		return  array(
+			'id' => 0,
+			'name' =>'',
+			'url' => '',
+			'reference' => '',
+		);
+	}
 }
 
 function get_party( $party_id, $get_extra_data = true ) {
-	global $party_name;//, $party_perma_link;
-	$all_terms = get_terms( $party_name, array( 'include' => $party_id ) );
+	global $party_name;
+	$all_terms = get_terms( $party_name, array( 'include' => $party_id, 'hide_empty' => false ) );
 	$party_terms = $all_terms[0];
+	error_log( print_r( $party_id, true ) );
+	error_log( print_r( $get_extra_data, true ) );
+	error_log( print_r( $all_terms, true ) );
+	error_log( print_r( $party_name, true ) );
 	
 	$results = array(
 		'name' => $party_terms->name,
@@ -115,7 +128,6 @@ function get_party_from_candidate( $candidate_id ) {
 }
 
 function get_candidate( $candidate_id ) {
-	//global $candidate_perma_link;
 	$image_id = get_post_thumbnail_id( $candidate_id );
 	if ( $image_id ) {
 		$image_url = wp_get_attachment_url( $image_id );
@@ -196,6 +208,7 @@ function display_news_titles ( $news ) {
 	if ( $articles->have_posts() ) :
 		while ( $articles->have_posts() ) :
 			$articles->the_post();
+			error_log( print_r( $articles->post, true ) );
 			$article_id = $articles->post->ID;
 			$date = get_the_date( 'l, j, F Y', $article_id );
 			if ( $date != $last_date ) :
@@ -211,7 +224,6 @@ function display_news_titles ( $news ) {
 			$mentions = array();
 			foreach ( $references as $reference ) :
 				$reference_id = get_tax_meta( $reference->term_id, 'reference_post_id' );
-				error_log( print_r( $reference_id, true ) );
 				switch ( get_tax_meta( $reference->parent, 'reference_post_id' ) ) :
 					case $party_name:
 						error_log( print_r( get_term_link( $reference_id, $party_name ), true ) );
@@ -225,10 +237,11 @@ function display_news_titles ( $news ) {
 						$url = '';
 				endswitch;
 				error_log( $url );
-				$mentions[] = "<a href='$url'>{$reference->name}</a>";
+				$name = esc_attr( $reference->name );
+				$mentions[] = "<a href='$url'>$name</a>";
 			endforeach; ?>
 			<li>
-				<p class="link"><a href="<?php echo get_post_meta( $article_id, 'url', true ); ?>"><?php echo get_the_title( $article_id ); ?></a></p>
+				<p class="link"><a href="<?php echo esc_attr( get_post_meta( $article_id, 'url', true ) ); ?>"><?php echo get_the_title( $article_id ); ?></a></p>
 				<p class="mentions">Mentions:
 				<?php echo implode (', ', $mentions); ?>
 				</p>
@@ -251,12 +264,13 @@ function display_news_summaries ( $news, $reference_id = -1 ) {
 			$summaries = get_post_meta( $article->ID, 'summaries', true );
 			$summary = isset( $summaries[$reference_id] ) ? $summaries[$reference_id] : get_post_meta( $article->ID, 'summary', true );
 			$sources = wp_get_post_terms( $article->ID, $source_name );
-			$source = $sources[0]; ?>
+			$source = $sources[0];
+			$source_label = esc_html( $source->description ? $source->description : $source->name ); ?>
 			<div class="news-article">	
-				<h3><a href="<?php echo get_post_meta( $article->ID, 'url', true ); ?>"><?php echo get_the_title( $article->ID ); ?></a></h3>
+				<h3><a href="<?php echo esc_attr( get_post_meta( $article->ID, 'url', true ) ); ?>"><?php echo get_the_title( $article->ID ); ?></a></h3>
 				<p class="date"><?php echo get_the_date( 'l, j F Y', $article->ID ); ?></p>
 				<p class="summary" >
-					<em><?php echo $source->name; ?></em>
+					<em><?php echo $source_label; ?></em>
 					- <?php echo $summary; ?>
 				</p>
 			</div>
@@ -269,34 +283,34 @@ function display_news_summaries ( $news, $reference_id = -1 ) {
 function display_party( $party ) {
 	?>
 	<div class="party">
-		<div class="image" style="border-bottom: 8px solid <?php echo $party['colour']; ?>">
-			<img alt="<?php echo $party['name']; ?> Logo" src="<?php echo $party['logo_url']; ?>"/>
+		<div class="image" style="border-bottom: 8px solid <?php echo esc_attr( $party['colour'] ); ?>">
+			<img alt="<?php echo $party['name']; ?> Logo" src="<?php echo esc_attr( $party['logo_url'] ); ?>"/>
 		</div>
 		<div class="name" >
 			<?php echo $party['name']; ?>
 		</div>
 		<div class="website <?php echo $party['website'] ? '' : 'hidden'; ?>" >
-			<a href="<?php echo $party['website']; ?>">Party Website</a>
+			<a href="<?php echo esc_attr( $party['website'] ); ?>">Party Website</a>
 		</div>
 		<div class="icons">
 		<?php foreach ( $party['icon_data'] as $icon ) : ?>
 			<?php if ( $icon['url'] ) : ?>
-				<a href="<?php echo $icon['url']; ?>">
+				<a href="<?php echo esc_attr( $icon['url'] ); ?>">
 			<?php endif; ?>
-			<img alt="<?php echo $icon['alt']; ?>" src="<?php echo $icon['src']; ?>" />
+			<img alt="<?php echo esc_attr( $icon['alt'] ); ?>" src="<?php echo esc_attr( $icon['src'] ); ?>" />
 			<?php if ( $icon['url'] ): ?>
 				</a>
 			<?php endif; ?>
 		<?php endforeach; ?>
 		</div>
 		<div class="phone <?php echo $party['phone'] ? '' : 'hidden'; ?>">
-			<?php echo $party['phone']; ?>
+			<?php echo esc_html( $party['phone'] ); ?>
 		</div>
 		<div class="address" <?php echo $party['address'] ? '' : 'hidden'; ?>>
-			<?php echo $party['address']; ?>
+			<?php echo esc_html( $party['address'] ); ?>
 		</div>
 		<div class="news">
-			News: <a href="<?php echo $party['url']; ?>#news">The Latest <?php echo $party['name']; ?> News</a>
+			News: <a href="<?php echo esc_attr( $party['url'] ); ?>#news">The Latest <?php echo esc_html( $party['name'] ); ?> News</a>
 		</div>
 	</div>
 <?php }
@@ -308,41 +322,41 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 	$display_news = in_array( 'news', $show_fields );
 	
 	?><div class="politician show_constituency">
-		<div class="image" style="border-bottom: 8px solid <?php echo $party['colour'] ?>;">
-			<img alt="<?php echo $candidate['name'] ?>" src="<?php echo $candidate['image_url'] ?>" />
+		<div class="image" style="border-bottom: 8px solid <?php echo esc_attr( $party['colour'] ); ?>;">
+			<img alt="<?php echo $candidate['name'] ?>" src="<?php echo esc_attr( $candidate['image_url'] ); ?>" />
 			<?php if ( $candidate['party_leader'] ) :?>
 			<div class="leader">party leader</div>
 			<?php endif; ?>
 		</div>
 		<div class="constituency <?php echo $display_constituency ? '' : 'hidden'; ?>">
-			<a href="<?php echo $constituency['url']; ?>"><?php echo $constituency['name']; ?></a>
+			<a href="<?php echo $constituency['url']; ?>"><?php echo esc_html( $constituency['name'] ); ?></a>
 			<?php if ( $candidate['incumbent_year'] && $incumbent_location == 'constituency') : ?>
-				<div class="since">Incumbent since <?php echo $candidate['incumbent_year']; ?></div>
+				<div class="since">Incumbent since <?php echo esc_html( $candidate['incumbent_year'] ); ?></div>
 			<?php endif; ?>
 		</div>
 		<div class="name <?php echo $display_name ? '' : 'hidden'; ?>">
-			<strong><a href="<?php echo $candidate['url'] ?>"><?php echo $candidate['name']; ?></a></strong>
+			<strong><a href="<?php echo $candidate['url'] ?>"><?php echo esc_html( $candidate['name'] ); ?></a></strong>
 			<?php if ( $candidate['incumbent_year'] && $incumbent_location == 'name' ) : ?>
-				<div class="since">Incumbent since <?php echo $candidate['incumbent_year']; ?></div>
+				<div class="since">Incumbent since <?php echo esc_html( $candidate['incumbent_year'] ); ?></div>
 			<?php endif; ?>
 		</div>
 		<div class="election-website <?php echo $candidate['website'] ? '': 'hidden'; ?>">
-			<a href="<?php echo $candidate['website'] ?>">Election Website</a>
+			<a href="<?php echo esc_html( $candidate['website'] ); ?>">Election Website</a>
 		</div>
 		<div class="icons">
 			<?php foreach ( $candidate['icon_data'] as $icon ) :
 				if ( $icon['url'] ) : ?>
-					<a href="<?php echo $icon['url']; ?>">
+					<a href="<?php echo esc_attr( $icon['url'] ); ?>">
 				<?php endif; ?>
-				<img alt="<?php echo $icon['alt']; ?>" src="<?php echo $icon['src']; ?>" />
+				<img alt="<?php echo esc_attr( $icon['alt'] ); ?>" src="<?php echo esc_attr( $icon['src'] ); ?>" />
 				<?php if ( $icon['url'] ): ?>
 					</a>
 				<?php endif;
 			endforeach; ?>
 		</div>
-		<div class="news <?php echo $display_news ? '' : 'hidden'; ?>">News: <a href="<?php echo $candidate['url']; ?>"><?php echo $news['count']; ?> Related Articles</a></div>
-		<div class="candidate-party <?php echo $display_party ? '' : 'hidden' ?>">Political Party: <a href="<?php echo $party['url']; ?>"><?php echo $party['name']; ?></a></div>
-		<div class="phone <?php echo $candidate['phone'] ? '' : 'hidden' ?>">Phone: <?php echo $candidate['phone']; ?></div>
+		<div class="news <?php echo $display_news ? '' : 'hidden'; ?>">News: <a href="<?php echo $candidate['url']; ?>"><?php echo esc_html( $news['count'] ); ?> Related Articles</a></div>
+		<div class="candidate-party <?php echo $display_party ? '' : 'hidden' ?>">Political Party: <a href="<?php echo $party['url']; ?>"><?php echo esc_html( $party['name'] ); ?></a></div>
+		<div class="phone <?php echo $candidate['phone'] ? '' : 'hidden' ?>">Phone: <?php echo esc_html( $candidate['phone'] ); ?></div>
 	</div>
 <?php }
 

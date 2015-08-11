@@ -56,6 +56,10 @@ class Election_Data {
 	 * @var      string    $version    The current version of the plugin.
 	 */
 	protected $version;
+	
+	protected $candidate;
+	
+	protected $news_artice;
 		
 	/**
 	 * Define the core functionality of the plugin.
@@ -76,11 +80,11 @@ class Election_Data {
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
 
-		$candidate = new Election_Data_Candidate();
-		$candidate->define_hooks();
+		$this->candidate = new Election_Data_Candidate();
+		$this->candidate->define_hooks();
 		
-		$news_article = new Election_Data_News_Article();
-		$news_article->define_hooks();
+		$this->news_article = new Election_Data_News_Article();
+		$this->news_article->define_hooks();
 	}
 
 	/**
@@ -187,6 +191,7 @@ class Election_Data {
 		$plugin_meta_box = new Election_Data_Meta_Box( $this->get_plugin_name() );
 		$this->loader->add_action( 'load-toplevel_page_' . $this->get_plugin_name() , $plugin_meta_box, 'add_meta_boxes' );
 
+		$this->loader->add_action( 'wp_ajax_election_data_erase_site', $this, 'erase_data' );
 	}
 
 	/**
@@ -244,5 +249,136 @@ class Election_Data {
 	public function get_version() {
 		return $this->version;
 	}
+	
+	public static function import( $file_type, $file_data, $mode ) {
+		$candidate = new Election_Data_Candidate( false );
+		$news_article = new Election_Data_News_Article( false );
+		
+		$file_name = $file_data['tmp_name'];
+		error_log( "importing: $file_type" . print_r( $file_data, true ) );
 
+		switch ( $file_type ) {
+			case 'xml':
+				$success = true;
+				error_log( "XML chosen: $file_name" );
+				break;
+			case 'csv_zip':
+				$success = true;
+				error_log( "ZIP chosen: $file_name" );
+				$zip = new ZipArchive();
+				$zip->open( $file_name );
+				$types = array( 'party', 'constituency', 'candidate' );
+				foreach( $types as $type ) {
+					$csv = $zip->getStream( "$type.csv" );
+					$success |= $candidate->import_csv( $type, $csv, $mode );
+					fclose( $csv );
+				}
+
+				$types = array( 'news_source', 'news_article', 'news_mention' );
+				foreach( $types as $type ) {
+					$csv = $zip->getStream( "$type.csv" );
+					$success |= $news_article->import_csv( $type, $csv, $mode );
+					fclose( $csv );
+				}
+				break;
+			case 'csv_candidate':
+			case 'csv_party':
+			case 'csv_constituency':
+				error_log( "Candidate: $file_type chosen: $file_name" );
+				$type = substr( $file_type, 4 );
+				$csv = fopen( "$file_name", 'r');
+				$success = $candidate->import_csv( $type, $csv, $mode );
+				break;
+			case 'csv_news_source':
+			case 'csv_news_article':
+			case 'csv_news_mention':
+				error_log( "News Article: $file_type chosen: $file_name" );
+				$type = substr( $file_type, 4 );
+				$csv = fopen( "$file_name", 'r');
+				$success = $news_article->import_csv( $type, $csv, $mode );
+				break;
+			default:
+				$success = false;
+				break;
+		}
+		
+		return $success;
+	}
+	
+	public static function export( $file_type ) {		
+		$candidate = new Election_Data_Candidate( false );
+		$news_article = new Election_Data_News_Article( false );
+
+		switch ( $file_type ) {
+			case 'xml':
+				$file = tempnam( 'tmp', 'xml' );
+				$xml = new XMLWriter();
+				$xml->openURI( "file://$file" );
+				$xml->startDocument( '1.0' );
+				$candidate->export_xml( $xml );
+				$news_article->export_xml ( $xml );
+				$xml->endDocument();
+				$xml->flush();
+				$content_type = 'application/xml';
+				$file_name = 'Election_Data.xml';
+				break;
+			case 'csv_zip':
+				$file = tempnam( 'tmp', 'zip' );
+				$zip = new ZipArchive();
+				$zip->open( $file, ZipArchive::OVERWRITE );
+				$types = array( 'candidate', 'party', 'constituency' );
+				$csv_files = array();
+				foreach ( $types as $type ) {
+					$csv_file = $candidate->export_csv( $type );
+					$zip->addFile( $csv_file, "$type.csv" );
+					$csv_files[] = $csv_file;
+				}
+				$types = array( 'news_article', 'news_source', 'news_mention' );
+				foreach ( $types as $type ) {
+					$csv_file = $news_article->export_csv( $type );
+					$zip->addFile( $csv_file, "$type.csv" );
+					$csv_files[] = $csv_file;
+				}
+				
+				$zip->close();
+				foreach ( $csv_files as $csv_file ) {
+					unlink( $csv_file );
+				}
+				$content_type = 'application/zip';
+				$file_name = 'Election_Data.zip';
+				break;
+			case 'csv_candidate':
+			case 'csv_party':
+			case 'csv_constituency':
+				$type = substr( $file_type, 4 );
+				$file = $candidate->export_csv( $type );
+				$content_type = 'text/csv';
+				$file_name = "$type.csv";
+				break;
+			case 'csv_news_article':
+			case 'csv_news_source':
+			case 'csv_news_mention':
+				$type = substr( $file_type, 4 );
+				$file = $news_article->export_csv( $type );
+				$content_type = 'text/csv';
+				$file_name = "$type.csv";
+				break;
+			default:
+				return;
+		}
+		
+		header( "Content-Type: $content_type" );
+		header( 'Content-Length: ' . filesize( $file ) );
+		header( "Content-Disposition: attachment; filename=\"$file_name\"" );
+		readfile( $file );
+		unlink( $file );
+		exit();
+	}
+	
+	function erase_data()
+	{
+		$this->candidate->erase_data();
+		$this->news_article->erase_data();
+		wp_die();
+	}
 }

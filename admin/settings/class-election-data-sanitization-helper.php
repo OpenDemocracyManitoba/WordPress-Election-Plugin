@@ -46,6 +46,8 @@ class Election_Data_Sanitization_Helper {
 		add_filter( 'election_data_settings_sanitize_email', array( $this, 'sanitize_email_field' ) );
 		add_filter( 'election_data_settings_sanitize_checkbox', array( $this, 'sanitize_checkbox_field' ) );
 		add_filter( 'election_data_settings_sanitize_url', array( $this, 'sanitize_url_field' ) );
+		add_filter( 'election_data_settings_sanitize_import', array( $this, 'sanitize_import' ) );
+		add_filter( 'election_data_settings_sanitize_export', array( $this, 'sanitize_export' ) );
 	}
 
 	/**
@@ -73,7 +75,11 @@ class Election_Data_Sanitization_Helper {
 		if ( empty( $_POST['_wp_http_referer'] ) ) {
 			return $input;
 		}
-
+		
+		if ( is_null( $input ) ) {
+			$input = array ();
+		}
+		
 		parse_str( $_POST['_wp_http_referer'], $referrer );
 		$tab = isset( $referrer['tab'] ) ? $referrer['tab'] : Election_Data_Settings_Definition::get_default_tab_slug();
 
@@ -114,7 +120,7 @@ class Election_Data_Sanitization_Helper {
 	}
 	
 	private function apply_validation_filter( $input, $key, $old_plugin_settings ) {
-		return apply_filters( "election_data_settings_validate_$key", $input[$key], $old_plugin_settings[$key],"{$this->plugin_name}-notices" );
+		return apply_filters( "election_data_settings_validate_$key", $input[$key], isset( $old_plugin_settings[$key] ) ? $old_plugin_settings[$key] : null, "{$this->plugin_name}-notices" );
 	}
 
 	private function apply_type_filter( $input, $tab, $key ) {
@@ -138,9 +144,9 @@ class Election_Data_Sanitization_Helper {
 	private function do_settings_on_key_change_hook( $key, $new_value, $old_plugin_settings ) {
 
 		//checks if value is saved already in $old_plugin_settings
-		if ( isset($old_plugin_settings[$key]) && $old_plugin_settings[$key] !== $new_value ) {
+		if ( !isset($old_plugin_settings[$key]) || $old_plugin_settings[$key] !== $new_value ) {
 
-			do_action( 'election_data_settings_on_change_' . $key, $new_value, $old_plugin_settings[$key] );
+			do_action( 'election_data_settings_on_change_' . $key, $new_value, isset( $old_plugin_settings[$key] ) ? $old_plugin_settings[$key] : null );
 			return true;
 		}
 		
@@ -151,11 +157,21 @@ class Election_Data_Sanitization_Helper {
 	private function do_settings_on_change_hook( $new_values, $tab ) {
 
 		$old_plugin_settings = get_option( 'election_data_settings' );
+		if ( empty( $old_plugin_settings ) )
+		{
+			$old_plugin_settings = array();
+		}
 		$changed = false;
-
+		
 		foreach ( $new_values as $key => $new_value ) {
 
-			if ( isset( $old_plugin_settings[$key] ) && $old_plugin_settings[$key] !== $new_value ) {
+			if ( !isset( $old_plugin_settings[$key] ) || $old_plugin_settings[$key] !== $new_value ) {
+				$changed = true;
+			}
+		}
+		
+		foreach( $old_plugin_settings as $key => $old_value ) {
+			if ( !isset( $new_values[$key] ) ) {
 				$changed = true;
 			}
 		}
@@ -182,9 +198,11 @@ class Election_Data_Sanitization_Helper {
 		// Remove empty elements
 		$input = array_filter( $input, array( $this, 'not_empty_or_zero' ) );
 		foreach ( $this->registered_settings[$tab] as $key => $_value ) {
-
+			if ( isset( $_value['no_value'] ) && $_value['no_value'] ) {
+				continue;
+			}
 			if ( ! isset( $input[$key] ) ) {
-				$this->do_settings_on_key_change_hook( $key, null );
+				$this->do_settings_on_key_change_hook( $key, null, $old_plugin_settings );
 				if(isset($old_plugin_settings[$key])){unset( $old_plugin_settings[$key] );}
 			}
 		}
@@ -292,5 +310,22 @@ class Election_Data_Sanitization_Helper {
 
 		return esc_url_raw( sanitize_text_field( rawurldecode( $input ) ), $allowed_protocols );
 
+	}
+	
+	public function sanitize_import( $input ) {
+		if ( isset( $_POST['ed_import_export'] ) && $_POST['ed_import_export'] == 'import' )
+		{
+			$mode = isset( $_POST['ed_import_overwrite_data'] ) ? 'overwrite' : 'no_overwrite' ;
+			if ( isset( $_FILES['ed_import_file'] ) ) {
+				Election_Data::import( $_POST['election_data_settings']['import'], $_FILES['ed_import_file'], $mode );
+			}
+		}
+	}
+	
+	public function sanitize_export( $input ) {
+		if ( isset( $_POST['ed_import_export'] ) && $_POST['ed_import_export'] == 'export' )
+		{
+			Election_Data::export( $_POST['election_data_settings']['export'] );
+		}
 	}
 }

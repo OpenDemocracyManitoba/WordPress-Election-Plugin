@@ -31,6 +31,10 @@ class Election_Data_Candidate {
 	// Definition of the Party and Constituency taxonomies.
 	protected $taxonomies;
 	
+	protected $post_meta;
+	
+	protected $taxonomy_meta;
+	
 	function __construct() {
 		$this->custom_post = array(
 			'name' => 'ed_candidates',
@@ -117,7 +121,7 @@ class Election_Data_Candidate {
 				),
 				'incumbent_year' => array(
 					'label' => __( 'Year Previously Elected' ),
-					'id' => 'incumbent',
+					'id' => 'incumbent_year',
 					'desc' => __( 'If the candidate is the incumbent, enter the year he/she was elected.' ),
 					'type' => 'text',
 					'std' => '',
@@ -294,14 +298,15 @@ class Election_Data_Candidate {
 			),
 		);
 		
-		$meta = new Post_Meta( 
+		$this->post_meta = new Post_Meta( 
 			$custom_post_meta['meta_box'],
 			$custom_post_meta['fields'],
 			$custom_post_meta['admin_columns']
 		);
 		
+		$this->taxonomy_meta = array();
 		foreach ( $taxonomy_meta as $name => $tax_meta_config ) {
-			$tax_meta = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'], array( 'Description', ) );
+			$this->taxonomy_meta[$name] = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'], array( 'Description', ) );
 		}
 	}
 	
@@ -525,5 +530,483 @@ SQL;
 		add_action( 'init',  array( $this, 'initialize' ) );
 		add_filter( 'template_include',  array( $this, 'include_template_function' ), 1 );
 		add_filter( 'wp_enqueue_scripts',  array( $this, 'setup_public_scripts' ) );
-	}	
- }
+	}
+		
+	function export_xml( $xml ) {
+	}
+	
+	function write_csv_row( $file, $data, $order ) {
+		$csv_data = array();
+		foreach ( $order as $field_name )
+		{
+			$csv_data[] = $data[$field_name];
+		}
+		fputcsv( $file, $csv_data );
+	}
+	
+	function export_candidate( $file, $type, $write_headings ) {
+		$post_fields = array(
+			'post_title' => 'name',
+			'post_name' => 'slug',
+			'image' => array( 
+				'base_64' => 'photo_base64',
+				'filename' => 'photo_filename',
+				'url' => 'photo_url',
+				'' => 'photo' ),
+		);
+		
+		$taxonomy_fields = array();
+		foreach ( $this->taxonomies as $name => $taxonomy ) {
+			$taxonomy_fields[$taxonomy['name']] = $name;
+		}
+		
+		$meta_fields = $this->post_meta->get_field_names();
+		
+		$headings = array();
+		foreach ( array_merge( $post_fields, $taxonomy_fields, $meta_fields ) as $field )
+		{
+			if ( is_array( $field ) ) {
+				$headings += $field;
+			} else {
+				$headings[] = $field;
+			}
+		}
+
+		if ( $write_headings ) {
+			$heading_data = array_combine( $headings, $headings );
+			call_user_func( array($this, "write_{$type}_row") , $file, $heading_data, $headings );
+		}
+		
+		$args = array(
+			'post_type' => $this->custom_post['name'],
+			'orderby' => 'name',
+			'order' => 'ASC',
+		);
+		$query = new WP_Query( $args );
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			$data = $this->post_meta->get_field_values( $query->post->ID );
+			
+			foreach ( $post_fields as $field => $label )
+			{
+				if ( 'image' == $field )
+				{
+					$image_id = get_post_thumbnail_id( $query->post->ID );
+					if ( $image_id ){
+						$image_meta = wp_get_attachment_metadata( $image_id );
+						$upload_dir = wp_upload_dir();
+						$image_filename = "{$upload_dir['basedir']}/{$image_meta['file']}";
+						$data[$label[0]] = base64_encode( file_get_contents( $image_filename ) );
+						$data[$label[1]] = basename( $image_Filename );
+					} else {
+						$data[$label[0]] = '';
+						$data[$label[1]] = '';
+					}
+				} else {
+					$data[$label] = $query->post->$field;
+				}
+			}
+			
+			foreach ( $taxonomy_fields as $name => $label )
+			{
+				$terms = get_the_terms( $query->post->ID, $name );
+				if ( isset( $terms[0] ) ) {
+					$term = $terms[0];
+					$data[$label] = $term->slug;
+				} else {
+					$data[$label] = '';
+				}
+			}
+			
+			call_user_func( array( $this, "write_{$type}_row" ), $file, $data, $headings );
+		}
+	}
+	
+	function export_taxonomy ( $file, $taxonomy, $taxonomy_fields, $type, $write_headings, $parent = null )
+	{
+		$taxonomy_meta = $this->taxonomy_meta[$taxonomy];
+		$meta_fields = $taxonomy_meta->get_field_names();
+		$headings = array();
+		foreach ( array_merge( $taxonomy_fields, $meta_fields ) as $field_name ) {
+			if ( is_array( $field_name ) ) {
+				$headings[] = $field_name['base64'];
+				$headings[] = $field_name['filename'];
+			} else {
+				$headings[] = $field_name;
+			}
+		}
+		
+		if ( $write_headings ) {
+			$headings_data = array_combine( $headings, $headings );
+			call_user_func( array($this, "write_{$type}_row") , $file, $headings_data, $headings );
+		}
+		
+		$args = array(
+			'hide_empty' => false,
+			'fields' => 'all',
+			'orderby' => 'name',
+			'order' => 'ASC'
+		);
+		if ( $parent !== null ) {
+			$args['parent'] = $parent;
+		}
+		$terms = get_terms( $this->taxonomies[$taxonomy]['name'], $args );
+		foreach ( $terms as $term ) {
+			$data = $taxonomy_meta->get_field_values( $term->term_id);
+			foreach ( $taxonomy_fields as $field )
+			{
+				if ( 'parent' == $field ) {
+					$parent_term = $term->parent ? get_term( $term->parent, $this->taxonomies[$taxonomy]['name'] ) : '';
+					$data[$field] = $parent_term ? $parent_term->slug : '';
+				} else {
+					$data[$field] = $term->$field;
+				}
+			}
+			
+			call_user_func( array( $this, "write_{$type}_row" ), $file, $data, $headings );
+			
+			if ( $parent !== null ) {
+				$this->export_taxonomy ( $file, $taxonomy, $taxonomy_fields, $type, false, $term->term_id );
+			}
+		}		
+	}
+	
+	function export_party( $file, $type, $write_headings ) {
+		$party_fields = array( 'name', 'slug', 'description' );
+		$this->export_taxonomy( $file, 'party', $party_fields, $type, $write_headings );
+	}
+	
+	function export_constituency( $file, $type, $write_headings ) {
+		$constituency_fields = array( 'name', 'slug', 'parent' );
+		$this->export_taxonomy( $file, 'constituency', $constituency_fields, $type, $write_headings, 0 );
+	}
+	
+	function export_csv ( $type ) {
+		$file_name = tempnam( 'tmp', 'csv' );
+		$file = fopen( $file_name, 'w' );
+		call_user_func( array( $this, "export_{$type}" ), $file, 'csv', true );
+		
+		fclose( $file );
+		return $file_name;
+	}
+	
+	function read_csv_line( $csv, $headings )
+	{
+		$data = fgetcsv( $csv );
+		return array_combine( $headings, $data );
+	}
+	
+	function get_or_create_term( $taxonomy, $data, $post_fields, $parent_field, $mode ) {
+		$args = array();
+		$term = null;
+		$name = $data['name'];
+		$slug = $data['slug'];
+		$description = in_array( 'description', $post_fields ) ? $data['description'] : '';
+		if ( empty( $data[$parent_field] ) ) {
+			$parent = 0;
+		} else {
+			$parent_term = get_term_by( 'slug', $data[$parent_field], $taxonomy );
+			$parent = $parent_term ? $parent_term->term_id : 0;
+		}
+		
+		if ( term_exists( $name, $taxonomy ) )
+		{
+			$term = get_term_by( 'name', $name, $taxonomy, ARRAY_A );
+		}
+		
+		if ( !empty( $slug ) ) {
+			$args['slug'] = $slug;
+			$term_slug = get_term_by( 'slug', $slug, $taxonomy, ARRAY_A );
+			if ( $term_slug )
+			{
+				if ( $term ) {
+					if ( $term_slug['term_id'] != $term['term_id'] && 'overwrite' == $mode ) {
+						return false;
+					}
+				} else {
+					$term = $term_slug;
+				}
+			}
+		}
+		
+		if ( !$term ) {
+			if ( $description ) {
+				$args['description'] = $description;
+			}
+			if ( $parent ) {
+				$args['parent'] = $parent;
+			}
+			
+			$term = wp_insert_term( $name, $taxonomy, $args );
+		} else {
+			$args = array( 'name' => $name );
+			if ( !empty( $slug ) && 'overwrite' == $mode) {
+				$args['slug'] = $slug;
+			}
+			if ( !empty( $parent ) && ( !$term['parent'] || 'overwrite' == $mode ) ) {
+				$args['parent'] = $parent;
+			}
+			if ( !empty( $description ) && ( !$term['description'] || 'overwrite' == $mode ) ) {
+				$args['description'] = $description;
+			}
+			wp_update_term( $term['term_id'], $taxonomy, $args );
+				
+		}
+		return $term;
+	}
+	
+	function add_image_data( $data, $field_name, $post_id = 0 ) {
+		$attachment_id = 0;
+		if ( !empty( $data["{$field_name}_base64"] ) && !empty( $data["{$field_name}_filename"] ) ) {
+			$file_name = $data["{$field_name}_filename"];
+			$src_name = tempnam( "tmp", "img" );
+			$src = fopen( $src_name, 'wb' );
+			fputs( $src, base64_decode( $data["{$field_name}_base64"] ) );
+			fclose( $src );
+		} elseif ( !empty( $data["{$field_name}_url"] ) ) {
+			$file_name = $data["{$field_name}_url"];
+			$src_name = wp_download( $file_name );
+			if ( is_wp_error( $src_name ) )
+			{
+				return 0;
+			}
+		} else {
+			return 0;
+		}
+		$desc = !empty( $data["{$field_name}_description"] ) ? $data["{$field_name}_description"] : '';
+		preg_match( '/[^\?]+\.(jpe?g|jpe|gif|png)\b/i', $file_name, $matches );
+		$file_array = array();
+		$file_array['name'] = basename( $matches[0] );
+		$file_array['tmp_name'] = $src_name;
+		
+		$id = media_handle_sideload( $file_array, $post_id, $desc );
+		
+		return $id;
+	}
+	
+	function get_taxonomy_terms( $taxonomies, $data ) {
+		$taxonomy_data = array();
+		foreach ( $taxonomies as $taxonomy ) {
+			if ( !empty( $data[$taxonomy] ) ) {
+				$term = get_term_by( 'slug', $data[$taxonomy], $this->taxonomies[$taxonomy]['name'] );
+				$taxonomy_data[$this->taxonomies[$taxonomy]['name']][] = $term->term_id;
+			}
+		}
+		
+		return $taxonomy_data;
+	}
+	
+	function get_or_create_post( $current_posts, $data, $post_fields, $mode ) {
+		$posts_by_title = $current_posts['post_title'];
+		$posts_by_name = $current_posts['post_name'];
+		$post = null;
+		$post_type = $this->custom_post['name'];
+		if ( isset( $post_fields['post_name'] ) && !empty( $data[$post_fields['post_name']] ) && !empty( $posts_by_title[$data[$post_fields['post_name']]] ) ) {
+			$post = $posts_by_name[$data[$post_fields['post_name']]];
+		}
+		if ( isset( $post_fields['post_title'] ) && !empty( $data[$post_fields['post_title']] ) && !empty( $posts_by_title[$data[$post_fields['post_title']]] ) ) {
+			$posts_title = $posts_by_title[$data[$post_fields['post_title']]];
+			if ( count( $posts_title ) == 1 ) {
+				if ( $post && $post->ID != $posts_title[0]->ID ) {
+					return 0;
+				} elseif ( !$post ) {
+					$post = $posts_title[0];
+				}
+			} elseif ( $post && count( $posts_title ) > 1 ) {
+				$found = false;
+				foreach ( $posts_title as $post_title ) {
+					if ( $post_title->ID == $post->ID ) {
+						$found = true;
+						break;
+					}
+				}
+				
+				if ( !$found )
+				{
+					return 0;
+				}
+			} else {
+				return 0;
+			}
+		}
+		
+		if ( !$post ) {
+			$args = array( 'post_type' => $post_type, 'post_status' => 'publish' );
+			foreach ( $post_fields as $post_name => $field_name ) {
+				$args[$post_name] = $data[$field_name];
+			}
+			
+			$post_id = wp_insert_post( $args );
+			return get_post( $post_id );
+		}
+		
+		$args = array( 'post_type' => $post_type, 'ID' => $post->ID );
+		$updated = false;
+		foreach ( $post_fields as $post_name => $field_name ) {
+			if ( 'overwrite' == $mode || empty( $post->$post_name ) ) {
+				$args[$post_name] = $data[$field_name];
+				$updated = true;
+			}
+		}
+		
+		if ( $updated ) {
+			wp_update_post( $args );
+		}
+		
+		return $post;
+	}
+	
+	function get_current_candidates() {
+		$query = new WP_Query( array( 'post_type' => $this->custom_post['name'] ) );
+		$candidates = array('post_title' => array(), 'post_name' => array());
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			$post = $query->post;
+			$candidates['post_title'][$post->post_title][] = $post;
+			$candidates['post_name'][$post->post_name] = $post;
+		}
+		
+		return $candidates;
+	}
+
+	function import_candidate_csv( $csv, $mode ) {
+		error_log( 'Importing Candidates' );
+		$post_fields = array(
+			'post_title' => 'name',
+			'post_name' => 'slug',
+		);
+		$post_image_fields = array( 
+			'base64' => 'photo_base64',
+			'filename' => 'photo_filename',
+			'url' => 'photo_url',
+			'' => 'photo',
+		);
+		$taxonomies = array( 'party', 'constituency' );
+		$meta_fields = $this->post_meta->get_field_names();
+		$headings = fgetcsv( $csv );
+		$found = true;
+		$current_candidates = $this->get_current_candidates();
+		foreach ( array_merge( $post_fields, $taxonomies, $meta_fields ) as $field ) {
+			$found &= in_array( $field, $headings );
+		}
+		$found &= ( in_array( $post_image_fields['base64'], $headings ) && in_array( $post_image_fields['filename'], $headings ) ) || in_array( $post_image_fields['url'], $headings );
+		
+		if ( !$found ) {
+			return false;
+		}
+		
+		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
+			$data = array_combine( $headings, $data );
+			$post = $this->get_or_create_post( $current_candidates, $data, $post_fields, $mode );
+			error_log( print_r ($post, true ) );
+			
+			foreach ( $taxonomies as $taxonomy ) {
+				$taxonomy_name = $this->taxonomies[$taxonomy]['name'];
+				$new_term = get_term_by( 'slug', $data[$taxonomy], $taxonomy_name );
+				$existing_terms = wp_get_post_terms( $post->ID, $taxonomy_name, array( 'fields' => 'ids' ) );
+				if ( 'overwite' == $mode || !$existing_terms ) {
+					wp_set_object_terms( $post->ID, $new_term->term_id, $taxonomy_name );
+				}
+				
+				$image_id = get_post_thumbnail_id( $post->ID );
+				if ( 'overwrite' == $mode || empty( $image_id ) ) {
+					$attachment_id = $this->add_image_data( $data, $post_image_fields[''] );
+					set_post_thumbnail( $post, $attachment_id );
+				}
+
+				$this->post_meta->update_field_values( $post->ID, $data, $mode );
+			}
+		}
+	}
+	
+	function import_taxonomy_csv( $csv, $mode, $taxonomy, $taxonomy_fields, $parent_field = '') {
+		$headings = fgetcsv( $csv );
+		$found = true;
+		$taxonomy_meta = $this->taxonomy_meta[$taxonomy];
+		$meta_fields = $taxonomy_meta->get_field_names( 'non_image' );
+		$image_fields = $taxonomy_meta->get_field_names( 'image' );
+		foreach ( array_merge( $taxonomy_fields, $meta_fields ) as $field ) {
+			$found &= in_array( $field, $headings );
+		}
+		if ( $parent_field ) {
+			$found &= in_array( $parent_field, $headings );
+		}
+		foreach ( $image_fields as $field ) {
+			$found &= ( in_array( $field['base64'], $headings ) && in_array( $field['filename'], $headings ) ) || in_array( $field['url'], $headings );
+		}
+		if ( !$found )
+		{
+			return false;
+		}
+
+		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
+			$data = array_combine( $headings, $data );
+			$term = $this->get_or_create_term( $this->taxonomies[$taxonomy]['name'], $data, $taxonomy_fields, $parent_field, $mode );
+			$current_meta = get_tax_meta_all( $term['term_id'] );
+			foreach ( $meta_fields as $field_name ) {
+				if ( $mode == 'overwrite' || empty( $current_meta[$field_name] ) ) {
+					update_tax_meta( $term['term_id'], $field_name, $data[$field_name] );
+				}
+			}
+			foreach ( $image_fields as $field_name ) {
+				if ( $mode == 'overwrite' || empty( $current_meta[$field_name['']] ) ) {
+					$attachment_id = $this->add_image_data( $data, $field_name[''] );
+					if ( $attachment_id ) {
+						$image_data = array (
+							'id' => $attachment_id,
+							'url' => wp_get_attachment_url( $attachment_id ),
+						);
+						update_tax_meta( $term['term_id'], $field_name[''], $image_data );
+					}
+				}
+			}
+		}
+		
+		return true;
+	}
+	
+	function import_party_csv( $csv, $mode ) {
+		error_log( 'Importing Parties' );
+		$taxonomy_fields = array( 'name', 'slug', 'description' );
+
+		return $this->import_taxonomy_csv( $csv, $mode, 'party', $taxonomy_fields );
+	}
+	
+	function import_constituency_csv( $csv, $mode ) {
+		error_log( 'Importing Constituencies' );
+		$taxonomy_fields = array( 'name', 'slug' );
+		$parent_field = 'parent';
+		
+		return $this->import_taxonomy_csv( $csv, $mode, 'constituency', $taxonomy_fields, $parent_field );
+	}
+	
+	function import_csv( $type, $csv, $mode )
+	{
+		return call_user_func( array( $this, "import_{$type}_csv" ), $csv, $mode );
+	}
+	
+	function erase_data()
+	{
+		$args = array(
+			'post_type' => $this->custom_post['name'],
+		);
+		$query = new WP_Query( $args );
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			wp_delete_post( $query->post->ID, true );
+		}
+		
+		foreach ( $this->taxonomies as $taxonomy ) {
+			$taxonomies[] = $taxonomy['name'];
+			$args = array(
+				'hide_empty' => false,
+				'fields' => 'ids',
+				'get' => 'all',
+			);
+			$term_ids = get_terms( $taxonomy['name'], $args );
+			foreach ( $term_ids as $term_id ) {
+				wp_delete_term( $term_id, $taxonomy['name'] );
+			}
+		}
+	}
+}

@@ -18,7 +18,7 @@
 */
 ?>
 
-<form action="options.php" method="POST">
+<form action="options.php" method="POST" enctype="multipart/form-data">
 	<?php settings_fields( 'election_data_settings' ); ?>
 	<?php do_settings_sections( 'election_data_settings_' . $active_tab ); ?>
 	<?php submit_button(); ?>

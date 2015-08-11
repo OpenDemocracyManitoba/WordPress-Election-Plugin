@@ -31,6 +31,10 @@ class Election_Data_News_Article {
 	// Definition of the Party and Constituency taxonomies.
 	protected $taxonomies;
 	
+	protected $post_meta;
+	
+	protected $taxonomy_meta;
+	
 	function __construct() {
 		$this->custom_post = array(
 			'name' => 'ed_news_articles',
@@ -78,13 +82,6 @@ class Election_Data_News_Article {
 					'label' => __( 'Summary ' ),
 					'id' => 'summary',
 					'desc' => __( 'A short summary of the news article.' ),
-					'type' => 'text',
-					'std' => '',
-				),
-				'source' => array(
-					'label' => __( 'Source' ),
-					'id' => 'source',
-					'desc' => __( 'The name of the source web site' ),
 					'type' => 'text',
 					'std' => '',
 				),
@@ -154,21 +151,22 @@ class Election_Data_News_Article {
 						'type' => 'text',
 						'id' => 'reference_post_id',
 						'std' => '',
-						'desc' => __( 'The post id for the reference.' ),
 						'label' => __( 'Reference Id' ),
+						'desc' => __( 'The post id for the reference.' ),
 					),
 				),
 			),
 		);
 		
-		$meta = new Post_Meta( 
+		$this->post_meta = new Post_Meta( 
 			$custom_post_meta['meta_box'],
 			$custom_post_meta['fields'],
 			$custom_post_meta['admin_columns']
 		);
 		
+		$this->taxonomy_meta = array();
 		foreach ( $taxonomy_meta as $name => $tax_meta_config ) {
-			$tax_meta = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'] );
+			$this->taxonomy_meta[$name] = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'] );
 		}
 	}
 	
@@ -600,7 +598,7 @@ SQL;
 				}
 				else if ( !isset( $sources['Valid Source'][$mention['base_url']] ) )
 				{
-					$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source']['name'], array( 'parent' => $source_parents['Unknown'] ) );
+					$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source']['name'], array( 'parent' => $source_parents['Unknown'], 'description' => $mention['source'] ) );
 					$sources['Unknown'][$mention['base_url']] = $term['term_id'];
 					continue;
 				} 
@@ -623,7 +621,6 @@ SQL;
 					update_post_meta( $article_id, 'url', $mention['url'] );
 					update_post_meta( $article_id, 'summary', wp_strip_all_tags( $mention['summary'] ) );
 					update_post_meta( $article_id, 'summaries', array( $reference_id => $mention['summary'] ) );
-					update_post_meta( $article_id, 'source', $mention['source'] );
 					wp_set_object_terms( $article_id, $sources['Valid Source'][$mention['base_url']], 'ed_news_articles_source');
 				}
 			
@@ -756,10 +753,188 @@ SQL;
 		add_action( 'election_data_settings_on_change_time', array( $this, 'change_cron_time' ) );
 		add_action( 'election_data_settings_on_change_frequency', array( $this, 'change_cron_frequency' ) );
 		add_filter( 'election_data_settings_validate_time', array( $this, 'validate_time' ), 10, 3 );
-		add_action( 'wp_ajax_run_news_scrape', array( $this, 'ajax_update_news_articles' ) );
-
+		add_action( 'wp_ajax_election_data_scrape_news', array( $this, 'ajax_update_news_articles' ) );
 		add_action( 'init', array( $this, 'initialize' ) );
 		add_filter( 'template_include', array( $this, 'include_template_function' ), 1 );
 		add_filter( 'wp_enqueue_scripts', array( $this, 'setup_public_scripts' ) );
 	}	
- }
+	
+	function export_xml( $xml ) {
+	}
+	
+	function write_csv( $file, $post_fields, $meta_fields ) {
+		$data = array();
+		
+		foreach ( $post_fields as $field )
+		{
+			$data[] = $field;
+		}
+		
+		foreach ( $meta_fields as $field )
+		{
+			$data[] = $field;
+		}
+		
+		fputcsv( $file, $data );
+	}
+	
+	function export_news_article_csv( $file ) {
+		$post_fields = array(
+			'post_title' => 'title',
+			'post_date' => 'date',
+			'post_name' => 'slug',
+		);
+		
+		$meta_fields = $this->post_meta->get_field_names();
+		$this->write_csv( $file, $post_fields, $meta_fields );
+		
+		$args = array(
+			'post_type' => $this->custom_post['name'],
+			'orderby' => 'name',
+			'order' => 'ASC',
+		);
+		$query = new WP_Query( $args );
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			$post_data = array();
+			foreach ( $post_fields as $field => $label )
+			{
+				if ( 'image' == $field )
+				{
+					$image_id = get_post_thumbnail_id( $query->post->ID );
+					if ( $image_id ){
+						$image_meta = wp_get_attachment_metadata( $image_id );
+						$upload_dir = wp_upload_dir();
+						$image_filename = "{$upload_dir['basedir']}/{$image_meta['file']}";
+						$post_data[] = base64_encode( file_get_contents( $image_filename ) );
+					} else {
+						$post_data[] = '';
+					}
+				} else {
+					$post_data[] = $query->post->$field;
+				}
+			}
+			
+			$taxonomy_data = array();
+
+			$meta_data = $this->post_meta->get_field_values( $query->post->ID );
+			
+			$this->write_csv( $file, $post_data, $meta_data );
+		}
+	}
+	
+	function export_taxonomy ( $file, $taxonomy, $taxonomy_fields, $type, $write_headings )
+	{
+		if ( isset( $taxonomy_meta[$taxonomy] ) ) {
+			$taxonomy_meta = $this->taxonomy_meta[$taxonomy];
+		}
+		if ( $write_headings ) {
+			$meta_fields = isset( $taxonomy_meta ) ? $taxonomy_meta->get_field_names() : array();
+
+			call_user_func( array($this, "write_$type") , $file, $taxonomy_fields, $meta_fields );
+		}
+		
+		$args = array(
+			'hide_empty' => false,
+			'fields' => 'all',
+			'orderby' => 'name',
+			'order' => 'ASC'
+		);
+		$terms = get_terms( $this->taxonomies[$taxonomy]['name'], $args );
+		foreach ( $terms as $term ) {
+			$taxonomy_data = array();
+			foreach ( $taxonomy_fields as $field )
+			{
+				if ( 'parent' == $field ) {
+					$parent = $term->parent ? get_term( $term->parent, $this->taxonomies[$taxonomy]['name'] ) : '';
+					$taxonomy_data[] = $parent ? $parent->slug : '';
+				} else {
+					$taxonomy_data[] = $term->$field;
+				}
+			}
+			
+			$meta_data = isset( $taxonomy_meta ) ? $taxonomy_meta->get_field_values( $term->term_id) : array();
+			call_user_func( array( $this, "write_$type" ), $file, $taxonomy_data, $meta_data );
+		}		
+	}
+	
+	function export_news_source_csv( $file ) {
+		$source_fields = array( 'name', 'slug', 'description', 'parent' );
+		$this->export_taxonomy( $file, 'source', $source_fields, 'csv', true );
+	}
+	
+	function export_news_mention_csv ( $file ) {
+		$headings = array( 'news_article', 'mention_type', 'mention' );
+		$this->write_csv( $file, $headings, array() );
+		
+		$args = array(
+			'post_type' => $this->custom_post['name'],
+			'orderby' => 'name',
+			'order' => 'ASC',
+		);
+			
+		$parents = $this->get_or_create_parent_taxonomy_terms( $this->taxonomies['reference']['name'], array( 'Party', 'Candidate' ) );
+		$parent_ids = array();
+		foreach ( $parents as $name => $id ) {
+			$parent_ids[$id] = $name;
+		}
+		
+		$query = new WP_Query( $args );
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			$terms = get_the_terms( $query->post->ID, $this->taxonomies['reference']['name'] );
+			foreach ( $terms as $term ) 
+			{
+				$reference = get_tax_meta( $term->term_id, 'reference_post_id' );
+				$parent_type = $parent_ids[$term->parent];
+				if ( 'Party' == $parent_type ) {
+					$party = get_term( $reference, 'ed_candidates_party' );
+					$data = array( $query->post->post_name, $parent_type, $party->slug );
+				}
+				elseif ( 'Candidate' == $parent_ids[$term->parent] ) {
+					$candidate = get_post( $reference );
+					$data = array( $query->post->post_name, $parent_type, $candidate->post_name );
+				}
+			}
+			
+			$this->write_csv( $file, $data, array() );
+		}
+	}
+	
+	function export_csv ( $type ) {
+		$file_name = tempnam( 'tmp', 'csv' );
+		$file = fopen( $file_name, 'w' );
+		call_user_func( array( $this, "export_{$type}_csv" ), $file );
+		
+		fclose( $file );
+		return $file_name;
+	}
+	
+	function import_csv( $type, $csv, $mode ) {
+		return true;
+	}
+	
+	function erase_data()
+	{
+		$args = array(
+			'post_type' => $this->custom_post['name'],
+		);
+		$query = new WP_Query( $args );
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			wp_delete_post( $query->post->ID, true );
+		}
+		
+		foreach ( $this->taxonomies as $taxonomy ) {
+			$taxonomies[] = $taxonomy['name'];
+			$args = array(
+				'hide_empty' => false,
+				'fields' => 'ids',
+			);
+			$term_ids = get_terms( $taxonomy['name'], $args );
+			foreach ( $term_ids as $term_id ) {
+				wp_delete_term( $term_id, $taxonomy['name'] );
+			}
+		}
+	}
+}

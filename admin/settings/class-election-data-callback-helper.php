@@ -78,7 +78,73 @@ class Election_Data_Callback_Helper {
 		$options = $args['options']
 		?>
 		<input type='button' id='<?php echo $options['id']; ?>' name='<?php echo $options['id']; ?>' value='<?php echo $options['label']; ?>' />
-		<?php 
+		<?php if ( $args['desc'] ) : ?>
+			<br><label><?php echo $args['desc']; ?></label>
+		<?php endif;
+	}
+	
+	public function display_import_export( $mode, $args ) {
+		$options = $args['options'];
+		$form_id = "{$options['id']}_form";
+		$radio_name = "election_data_settings[{$args['id']}]";
+		$missing_modules = array();
+		if ( $mode == 'import' ) {
+			$legend = __( 'Select the file type to import', $this->plugin_name );
+			$button_label = __( 'Import', $this->plugin_name );
+			$overwrite_label = __( 'Overwrite existing non-empty fields', $this->plugin_name  );
+			$upload_id = "{$options['id']}_file";
+			$overwrite_id = "{$options['id']}_overwrite_data";
+		} else {
+			$legend = __( 'Select the format of the file to export', $this->plugin_name );
+			$button_label = __( 'Export', $this->plugin_name );
+		}
+		?>
+		<fieldset class="radiogroup">
+		<legend><?php echo $legend; ?></legend>
+			<ul class="radio">
+				<?php foreach ( $options['formats'] as $type => $label ) : 
+					if ( isset( $options['required_modules'][$type] ) ) :
+						$loaded = true;
+						foreach ( $options['required_modules'][$type] as $module ) :
+							if ( !extension_loaded( $module ) ) :
+								$missing_modules[$module] = true;
+								$loaded = false;
+							endif;
+						endforeach;
+						
+						$disabled = $loaded ? '' : ' disabled';
+					else :
+						$disabled = '';
+					endif;
+					$radio_id = "election_data_settings[{$args['id']}][$type]"; ?>
+					<li><input type="radio" name="<?php echo $radio_name; ?>" value="<?php echo $type; ?>" id="<?php echo "$radio_id"; ?>" <?php echo checked( $type, $options['default'], false ) . $disabled ?>/>
+					<label for="<?php echo $radio_id; ?>"><?php echo $label; ?></label></li>
+				<?php endforeach; ?>
+			</ul>
+		</fieldset>
+		<?php if ( $mode == 'import' ) : ?>
+			<input type="checkbox" name="<?php echo $overwrite_id; ?>" id="<?php echo $overwrite_id; ?>" value="overwrite"/><label for="<?php echo $overwrite_id; ?>"><?php echo $overwrite_label; ?></label><br>
+			<input type="file" name="<?php echo $upload_id; ?>" id="<?php echo $upload_id; ?>"/><br>
+		<?php endif; ?>
+		<button type="submit" name="ed_import_export" value="<?php echo $mode; ?>"><?php echo $button_label; ?></button>
+		<br>
+		<label><?php echo $args['desc']; ?></label>
+		<?php if ( $missing_modules ) : ?>
+			<br><label>Some options have been disabled due to missing modules. The missing modules are:</label>
+			<ul>
+				<?php foreach ( $missing_modules as $module => $value ) : ?>
+					<li><?php echo $module; ?></li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif;
+	}
+	
+	public function import_callback( $args ) {
+		$this->display_import_export( 'import', $args );
+	}
+	
+	public function export_callback( $args ) {
+		$this->display_import_export( 'export', $args );
 	}
 	
 	/**

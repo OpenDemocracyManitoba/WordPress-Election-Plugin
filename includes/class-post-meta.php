@@ -154,7 +154,6 @@ class Post_Meta {
 	 *
 	 */
 	public function render_custom_meta_box( $post ) {
-		$fields = $this->fields;
 		echo '<table class="form-table">';
 		foreach ( $this->fields as $field ) {
 			echo '<tr>';
@@ -222,7 +221,8 @@ class Post_Meta {
 			// Also skip the field if it is empty (false) and skip_empty is true.
 			if ( isset( $_POST[$this->prefix . $field['id']] ) && ( !$skip_empty || $_POST[$this->prefix . $field['id']] ) ) {
 				$new = $_POST[$this->prefix . $field['id']];
-				update_post_meta( $post_id, $field['id'], $new );
+				error_log( "{$field['id']}: $new" );
+				update_post_meta( $post_id, stripslashes( $field['id'] ), $new );
 			}
 		}
 	}
@@ -348,7 +348,7 @@ class Post_Meta {
 	 * @param array $field
 	 *
 	 */
-	protected function show_edit_label ( $field )
+	protected function display_edit_label( $field )
 	{
 		$label = esc_html( $field['label'] );
 		echo "<th style='width: 20%'><label for='{$this->prefix}{$field['id']}'>$label</label></th>";
@@ -362,7 +362,7 @@ class Post_Meta {
 	 * @param array $field
 	 *
 	 */
-	protected function show_quick_label ( $field ) {
+	protected function display_quick_label ( $field ) {
 		$label = esc_html( $field['label'] );
 		echo "<label class='alignleft'><span class='title'>$label</span></label>";
 	}
@@ -381,14 +381,14 @@ class Post_Meta {
 	protected function show_text( $field, $mode, $value, $type='text' ) {
 		switch ( $mode ) {
 			case 'edit':
-				$this->show_edit_label ( $field, $mode );
-				esc_attr( $value = $value ? $value : $field['std'] );
+				$this->display_edit_label ( $field, $mode );
+				$value = esc_attr( $value = $value ? $value : $field['std'] );
 				echo "<td><input type='$type' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' size='30' style='width:97%' />";
 				echo "<br />{$field['desc']}</td>";
 				break;
 			case 'quick':
 				$value = esc_attr( $field['std'] );
-				$this->show_quick_label ( $field, $mode );
+				$this->display_quick_label ( $field, $mode );
 				echo "<input type='$type' name='{$this->prefix}{$field['id']}' value='' />";
 				break;
 			case 'column':
@@ -406,7 +406,7 @@ class Post_Meta {
 	protected function show_hidden( $field, $mode, $value ) {
 		switch ( $mode ) {
 			case 'edit':
-				esc_attr( $value = $value ? $value : $field['std'] );
+				$value = esc_attr( $value = $value ? $value : $field['std'] );
 				echo "<td class='hidden'><input type='hidden' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' /></td>";
 				break;
 			case 'quick':
@@ -457,17 +457,56 @@ class Post_Meta {
 		switch ( $mode ) {
 			case 'edit':
 				$checked = $value ? 'checked' : '';
-				$this->show_edit_label ( $field );
+				$this->display_edit_label ( $field );
 				echo "<td><input type='checkbox' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='true' $checked size='30' />";
 				echo "<br />{$field['desc']}</td>";
 				break;
 			case 'quick':
-				$this->show_quick_label ( $field, $mode );
+				$this->display_quick_label ( $field, $mode );
 				echo "<input type='checkbox' name='{$this->prefix}{$field['id']}' value='true' />";
 				break;
 			case 'column':
 				echo $value ? 'X' : '';
 				break;
+		}
+	}
+	
+	public function get_field_names() {
+		$names = array();
+		foreach ( $this->fields as $field ) {
+			if ( isset( $field['label'] ) ) {
+				$names[] = $field['id'];
+			}
+		}
+		
+		return $names;
+	}
+	
+	public function get_field_values( $post_id ) {
+		$values = array();
+		$meta_values = get_post_meta( $post_id );
+		foreach ( $this->fields as $field ) {
+			if ( isset( $field['label'] ) ) {
+				if ( isset( $meta_values[$field['id']] ) && isset( $meta_values[$field['id']][0] ) ) {
+					$values[] = $meta_values[$field['id']][0];
+				} else {
+					$values[] = '';
+				}
+			}
+		}
+		
+		return $values;
+	}
+	
+	public function update_field_values( $post_id, $data, $mode )
+	{
+		$meta_values = get_post_meta( $post_id );
+		foreach ( $this->fields as $field ) {
+			if ( isset( $field['label'] ) ) {
+				if ( 'overwrite' == $mode || empty( $meta_values) || empty( $meta_values[$field['id']] ) ) {
+					update_post_meta( $post_id, $field['id'], $data[$field['id']] );
+				}
+			}				
 		}
 	}
 }

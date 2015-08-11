@@ -100,7 +100,7 @@ class Election_Data_Settings {
 
 			foreach ( $settings as $key => $option ) {
 
-				$_name = isset( $option['name'] ) ? $option['name'] : $key;
+				$_name = isset( $option['name'] ) ? $option['name'] : '';
 
 				// add_settings_field( $id, $title, $callback, $page, $section, $args )
 				add_settings_field(

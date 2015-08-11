@@ -182,7 +182,7 @@ class Tax_Meta {
 		$id = esc_attr( "{$this->prefix}{$field['id']}" );
 		$desc = esc_html( $field['desc'] );
 		echo "$header<img id='{$id}_img' src='$image_url' style='max-width:100%'/>";
-		echo "<input type='hidden' name='$id' id='$id' value='$image_id' />";
+		echo "<input type='text' name='$id' id='$id' value='$image_id' />";
 		echo "<br><input type='button' id='{$id}_add' name='{$id}_add' value='Select Image' $add_class/>";
 		echo "<br><input type='button' id='{$id}_del' name='{$id}_del' value='Remove Image' $del_class/>";
 		echo "<p>$desc</p>$footer";
@@ -250,27 +250,27 @@ class Tax_Meta {
 	}
 	
 	protected function get_posted_text( $field_id ) {
-		return $_POST[$field_id];
+		return stripslashes( $_POST[$field_id] );
 	}
 	
 	protected function get_posted_url( $field_id ) {
-		return $_POST[$field_id];
+		return stripslashes( $_POST[$field_id] );
 	}
 	
 	protected function get_posted_email( $field_id ) {
-		return $_POST[$field_id];
+		return stripslashes( $_POST[$field_id] );
 	}
 	
 	protected function get_posted_color( $field_id ) {
-		return $_POST[$field_id];
+		return stripslashes( $_POST[$field_id] );
 	}
 	
 	protected function get_posted_hidden( $field_id ) {
-		return $_POST[$field_id];
+		return stripslashes( $_POST[$field_id] );
 	}
 	
 	protected function get_posted_image( $field_id ) {
-		$id = $_POST[$field_id];
+		$id = stripslashes( $_POST[$field_id] );
 		return array( 'id' => $id, 'url' => wp_get_attachment_url( $id ) );
 	}
 	
@@ -294,6 +294,54 @@ class Tax_Meta {
 		{
 			delete_tax_meta_all( $term_id );
 		}
+	}
+	
+	public function get_field_names($mode = 'all') {
+		$names = array();
+		foreach ( $this->fields as $field ) {
+			if ( isset( $field['label'] ) ) {
+				if ( 'image' == $field['type'] && 'non_image' != $mode ) {
+					$names[] = array( 
+						'url' => "{$field['id']}_url",
+						'base64' => "{$field['id']}_base64", 
+						'filename' => "{$field['id']}_filename",
+						'' => $field['id'],
+					);
+				} elseif ( 'image' != $field['type'] && 'image' != $mode ) {
+					$names[] = $field['id'];
+				}
+			}
+		}
+		
+		return $names;
+	}
+	
+	public function get_field_values( $term_id ) {
+		$values = array();
+		$meta_values = get_tax_meta_all( $term_id );
+		foreach ( $this->fields as $field ) {
+			if ( isset( $field['label'] ) ) {
+				if ( 'image' == $field['type'] ) {
+					$image_id = isset( $meta_values[$field['id']] ) ? $meta_values[$field['id']]['id'] : 0;
+					if ( $image_id ){
+						$image_meta = wp_get_attachment_metadata( $image_id );
+						$upload_dir = wp_upload_dir();
+						$image_filename = "{$upload_dir['basedir']}/{$image_meta['file']}";
+						$values["{$field['id']}_filename"] = basename( $image_filename );
+						$values["{$field['id']}_base64"] = base64_encode( file_get_contents( $image_filename ) );
+					} else {
+						$values["{$field['id']}_base64"] = '';
+						$values["{$field['id']}_filename"] = '';
+					}
+				} elseif ( isset( $meta_values[$field['id']] ) ) {
+					$values[$field['id']] = $meta_values[$field['id']];
+				} else {
+					$values[$field['id']] = '';
+				}
+			}
+		}
+		
+		return $values;
 	}
 }
 
