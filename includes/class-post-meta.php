@@ -123,7 +123,7 @@ class Post_Meta {
 	 */
 	static public function init()
 	{
-		self::$allowed_admin_column_types = array( 'text' => '', 'url' => '', 'email' => '', 'checkbox' => '' );
+		self::$allowed_admin_column_types = array( 'text' => '', 'url' => '', 'email' => '', 'checkbox' => '', 'pulldown' => '' );
 	}
 	
 	/**
@@ -158,7 +158,7 @@ class Post_Meta {
 		foreach ( $this->fields as $field ) {
 			echo '<tr>';
 			$value = get_post_meta( $post->ID, $field['id'], true );
-			call_user_func( array( $this, "show_{$field['type']}" ), $field, 'edit', $value );
+			call_user_func( array( $this, "show_{$field['type']}" ), $field, 'edit', maybe_serialize ( $value ) );
 			echo '</tr>';
 		}
 		echo "</table>";
@@ -176,24 +176,20 @@ class Post_Meta {
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			wp_die();
 		}
-		
 		$post_ids = empty( $_POST['post_ids'] ) ? '' : $_POST['post_ids'];
 		if ( !empty( $_POST['post_id'] ) ) {
 			$this->save_post_fields( $_POST['post_id'] );
 		} elseif ( is_array( $post_ids ) ) {
 			foreach ( $post_ids as $post_id ) {
 				$post_type = get_post_type( $post_id );
-								
+
 				// Check if the post type is the correct type.
 				if ( $this->post_type != $post_type ) {
 					continue;
 				}
-				
 				$this->save_post_fields( $post_id, true );
 			}
 		}
-		
-		wp_die();
 	}
 
 	/*
@@ -314,6 +310,50 @@ class Post_Meta {
 		
 		return $vars;
 	}
+	
+	/*
+	 * Adds a filter for to the administrative interface for the requested column.
+	 *
+	 * @since 1.0
+	 * @access public
+	 *
+	 */
+	function filter_lists() {
+		$screen = get_current_screen();
+		global $wp_query;
+		
+		if ( $this->post_type == $screen->post_type ) {
+			foreach ( $this->filter_columns as $filter_column ) {
+				if ( $taxonomy['args']['show_admin_column'] )
+				{
+					$query = $taxonomy['args']['query_var'];
+					$name = $taxonomy['name'];
+					$selected = '';
+					if ( isset( $wp_query->query[$query] ) ) {
+						$term = get_term_by( 'slug', $wp_query->query[$query], $name );
+						if ( $term ) {
+							$selected = (int)$term->term_id;
+						}
+					}
+					
+					$args = array(
+						'show_option_all' => "All {$taxonomy['args']['labels']['name']}",
+						'taxonomy' => $name,
+						'name' => $query,
+						'orderby' => 'name',
+						'selected' => $selected,
+						'hierarchical' => true,
+						'depth' => 3,
+						'show_count' => false,
+						'hide_empty' => false,
+						'value_field' => 'slug'
+					);
+					
+					wp_dropdown_categories( $args );
+				}
+			}
+		}
+	}
 	/*
 	 * Enqueus the scripts and styles required to edit the custom data.
 	 *
@@ -330,6 +370,15 @@ class Post_Meta {
 			$translation_array = array();
 			foreach ( $this->admin_columns as $field => $value ) {
 				$translation_array[$field] = $this->prefix . $this->fields[$field]['id'];
+				
+				if ( 'pulldown' == $this->fields[$field]['type'] ) {
+					$pulldown_array = array();
+					foreach ( $this->fields[$field]['options'] as $value => $label ) {
+						$pulldown_array[$label] = $value;
+					}
+					
+					wp_localize_script( $script_id, "pm_post_meta_pulldown_{$this->fields[$field]['id']}", $pulldown_array );
+				}
 			}
 			
 			wp_localize_script( $script_id, 'pm_post_meta', $translation_array );
@@ -338,7 +387,7 @@ class Post_Meta {
 		}
 
 	}
-
+	
 	/**
 	 * Generates the HTML for a field label in the Edit screen.
 	 *
@@ -366,6 +415,35 @@ class Post_Meta {
 		echo "<label class='alignleft'><span class='title'>$label</span></label>";
 	}
 	
+	protected function show_pulldown( $field, $mode, $value ) {
+		switch ( $mode ) {
+			case 'edit':
+				$this->display_edit_label( $field, $mode );
+				$value = esc_attr( empty( $value ) ? $field['std'] : $value );
+				echo "<td><select name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' ";
+				break;
+			case 'quick':
+				$this->display_quick_label( $field, $mode );
+				$value = esc_attr( $field['std'] );	
+				echo "<select name='{$this->prefix}{$field['id']}' ";
+				break;
+			case 'column':
+				echo esc_html( empty( $field['options'][$value] ) ? $field['options'][$field['std']] : $field ['options'][$value] );
+				break;
+		}
+		
+		if ( $mode != 'column' ) {
+			echo "value='$value'>";
+			foreach ( $field['options'] as $option_value => $option_display ) {
+				echo "<option value='$option_value'>$option_display</option>";
+			}
+			echo '</select>';
+			if ( $mode == 'edit' ) {
+				echo "<br />{$field['desc']}</td>";
+			}
+		}
+	}
+	
 	/**
 	 * Generates the HTML for a text style field.
 	 *
@@ -380,7 +458,7 @@ class Post_Meta {
 	protected function show_text( $field, $mode, $value, $type='text' ) {
 		switch ( $mode ) {
 			case 'edit':
-				$this->display_edit_label ( $field, $mode );
+				$this->display_edit_label( $field, $mode );
 				$value = esc_attr( $value = $value ? $value : $field['std'] );
 				echo "<td><input type='$type' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' size='30' style='width:97%' />";
 				echo "<br />{$field['desc']}</td>";
@@ -405,8 +483,10 @@ class Post_Meta {
 	protected function show_hidden( $field, $mode, $value ) {
 		switch ( $mode ) {
 			case 'edit':
-				$value = esc_attr( $value = $value ? $value : $field['std'] );
-				echo "<td class='hidden'><input type='hidden' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' /></td>";
+				if ( ! $value ) {
+					$value = esc_attr( $value = $value ? $value : $field['std'] );
+					echo "<td class='hidden'><input type='hidden' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' /></td>";
+				}
 				break;
 			case 'quick':
 			case 'column':
@@ -473,7 +553,7 @@ class Post_Meta {
 	public function get_field_names() {
 		$names = array();
 		foreach ( $this->fields as $field ) {
-			if ( isset( $field['label'] ) ) {
+			if ( $field['imported'] ) {
 				$names[] = $field['id'];
 			}
 		}
@@ -485,11 +565,11 @@ class Post_Meta {
 		$values = array();
 		$meta_values = get_post_meta( $post_id );
 		foreach ( $this->fields as $field ) {
-			if ( isset( $field['label'] ) ) {
+			if ( $field['imported'] ) {
 				if ( isset( $meta_values[$field['id']] ) && isset( $meta_values[$field['id']][0] ) ) {
-					$values[$field['id']] = $meta_values[$field['id']][0];
+					$values[$field['id']] = maybe_serialize( $meta_values[$field['id']][0] );
 				} else {
-					$values[$field['id']] = '';
+					$values[$field['id']] = maybe_serialize( $field['std'] );
 				}
 			}
 		}
@@ -501,11 +581,11 @@ class Post_Meta {
 	{
 		$meta_values = get_post_meta( $post_id );
 		foreach ( $this->fields as $field ) {
-			if ( isset( $field['label'] ) ) {
-				if ( 'overwrite' == $mode || empty( $meta_values) || empty( $meta_values[$field['id']] ) ) {
-					update_post_meta( $post_id, $field['id'], $data[$field['id']] );
-				}
-			}				
+			if ( $field['imported'] && ( 'overwrite' == $mode || empty( $meta_values[$field['id']] ) ) ) {
+				update_post_meta( $post_id, $field['id'], maybe_unserialize( $data[$field['id']] ) );
+			} elseif ( empty( $meta_values[$field['id']] ) ) {
+				update_post_meta( $post_id, $field['id'], $field['std'] );
+			}
 		}
 	}
 }

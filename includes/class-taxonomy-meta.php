@@ -9,6 +9,8 @@
  *
  */
 
+require_once plugin_dir_path( __FILE__ ) . 'class-post-import.php';
+ 
 class Tax_Meta {
 	
 	/*
@@ -209,21 +211,22 @@ class Tax_Meta {
 	}
 	
 	protected function show_hidden( $field, $mode, $value ) {
-		if ( $mode == 'edit' )
-		{
-			$header = '<td class="hidden">';
-			$footer = '</td></tr>';
-			$value = esc_attr( $value ? $value : $field['std'] );
-			echo '<tr class="form-field">';
-		}
-		else
-		{
-			$header = '<div class="form-field">';
-			$footer = '</div>';
+		if (! $value ) {
+			if ( $mode == 'edit' )
+			{
+				$header = '<td class="hidden">';
+				$footer = '</td></tr>';
+				echo '<tr class="form-field">';
+			}
+			elseif ( $mode == 'add' )
+			{
+				$header = '<div class="form-field">';
+				$footer = '</div>';
+			}
+			$id = esc_attr( "{$this->prefix}{$field['id']}" );
 			$value = esc_attr( $field['std'] );
+			echo "$header<input type='hidden' id='$id' name='$id' value='$value'/>$footer";
 		}
-		$id = esc_attr( "{$this->prefix}{$field['id']}" );
-		echo "$header<input type='hidden' id='$id' name='$id' value='$value'/>$footer";
 	}
 	
 	protected function show_url( $field, $mode, $value ) {
@@ -245,7 +248,7 @@ class Tax_Meta {
 			$values = array();
 		}
 		foreach ( $this->fields as $field ) {
-			call_user_func( array( $this, "show_{$field['type']}" ), $field, $mode, isset( $values[$field['id']] ) ? $values[$field['id']] : '' );
+			call_user_func( array( $this, "show_{$field['type']}" ), $field, $mode, isset( $values[$field['id']] ) ? $values[$field['id']] : $field['std'] );
 		}
 	}
 	
@@ -282,7 +285,9 @@ class Tax_Meta {
 		if ( isset($_POST['action'] ) && ( 'editedtag' == $_POST['action'] || 'add-tag' == $_POST['action'] ) ) {
 			$term_meta = get_tax_meta_all( $term_id );
 			foreach ( $this->fields as $field ) {
-				$term_meta[$field['id']] = call_user_func( array( $this, "get_posted_{$field['type']}" ), "{$this->prefix}{$field['id']}" );
+				if ( isset( $_POST[$field_id] ) ) {
+					$term_meta[$field['id']] = call_user_func( array( $this, "get_posted_{$field['type']}" ), "{$this->prefix}{$field['id']}" );
+				}
 			}
 
 			update_tax_meta_all( $term_id, $term_meta );
@@ -299,7 +304,7 @@ class Tax_Meta {
 	public function get_field_names($mode = 'all') {
 		$names = array();
 		foreach ( $this->fields as $field ) {
-			if ( isset( $field['label'] ) ) {
+			if ( $field['imported'] ) {
 				if ( 'image' == $field['type'] && 'non_image' != $mode ) {
 					$names[] = array( 
 						'url' => "{$field['id']}_url",
@@ -320,7 +325,7 @@ class Tax_Meta {
 		$values = array();
 		$meta_values = get_tax_meta_all( $term_id );
 		foreach ( $this->fields as $field ) {
-			if ( isset( $field['label'] ) ) {
+			if ( $field['imported'] ) {
 				if ( 'image' == $field['type'] ) {
 					$image_id = isset( $meta_values[$field['id']] ) ? $meta_values[$field['id']]['id'] : 0;
 					if ( $image_id ){
@@ -334,14 +339,44 @@ class Tax_Meta {
 						$values["{$field['id']}_filename"] = '';
 					}
 				} elseif ( isset( $meta_values[$field['id']] ) ) {
-					$values[$field['id']] = $meta_values[$field['id']];
+					$value = $meta_values[$field['id']];
+					if ( isset( $field['pre_serialize'] ) ) {
+						$value = $field['pre_serialize']( $value );
+					}
+					$values[$field['id']] = maybe_serialize( $value );
 				} else {
-					$values[$field['id']] = '';
+					$value = $field['std'];
+					if ( isset( $field['pre_serialize'] ) ) {
+						$value = $field['pre_serialize']( $value );
+					}
+					$values[$field['id']] = maybe_serialize( $value );
 				}
 			}
 		}
 		
 		return $values;
+	}
+	
+	public function update_field_values( $term_id, $data, $mode ) {
+		$meta_values = get_tax_meta_all( $term_id );
+		foreach ( $this->fields as $field ) {
+			if ( $field['imported'] && ( 'overwrite' == $mode || empty( $meta_values[$field['id']] ) ) ) {
+				if ( 'image' == $field['type'] ) {
+					$attachment_id = Post_Import::add_image_data( $data, $field['id'] );
+					$url = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
+					$meta_values[$field['id']] = array( 'id' => $attachment_id, 'url' => $url );
+				} elseif ( ! empty( $data[$field['id']] ) ) {
+					$meta_values[$field['id']] = maybe_unserialize( $data[$field['id']] );
+					if ( isset( $field['post_unserialize'] ) ) {
+						$meta_values[$field['id']] = $field['post_unserialize']( $meta_values[$field['id']] );
+					}
+				} elseif ( empty( $meta_values[$field['id']] ) ) {
+					$meta_values[$field['id']] = $field['std'];
+				}
+			}
+		}
+		
+		update_tax_meta_all( $term_id, $meta_values );
 	}
 }
 

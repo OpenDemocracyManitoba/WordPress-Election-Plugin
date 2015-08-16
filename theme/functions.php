@@ -1,11 +1,94 @@
-<?php 
+<?php
+/**
+ * Election Data functions and definitions
+ *
+ * @package Election_Data_Theme
+ * @since Election_Data_Theme 1.0
+ *
+ */
+
+/**
+ * Set the content width based on the theme's design and stylesheet.
+ *
+ * @since Election_Data_Theme 1.0
+ */
+if ( ! isset( $content_width ) )
+    $content_width = 654; /* pixels */
+
+if ( ! function_exists( 'election_data_theme_setup' ) ):
+/**
+ * Sets up theme defaults and registers support for various WordPress features.
+ *
+ * Note that this function is hooked into the after_setup_theme hook, which runs
+ * before the init hook. The init hook is too late for some features, such as indicating
+ * support post thumbnails.
+ *
+ * @since Election_Data_Theme 1.0
+ */
+function election_data_theme_setup() {
+ 
+    /**
+     * Custom template tags for this theme.
+     */
+    require( get_template_directory() . '/inc/template-tags.php' );
+ 
+    /**
+     * Custom functions that act independently of the theme templates
+     */
+    require( get_template_directory() . '/inc/tweaks.php' );
+ 
+    /**
+     * Make theme available for translation
+     * Translations can be filed in the /languages/ directory
+     */
+    load_theme_textdomain( 'election_data_theme', get_template_directory() . '/languages' );
+ 
+}
+endif; // election_data_theme_setup
+add_action( 'after_setup_theme', 'election_data_theme_setup' );
+
+/**
+ * Enqueue scripts and styles
+ *
+ * @since Election_Data_Theme 1.0
+ */
+function election_data_theme_scripts() {
+    wp_enqueue_style( 'style', get_stylesheet_uri() );
+}
+add_action( 'wp_enqueue_scripts', 'election_data_theme_scripts' );
+
+/**
+ * Register widgetized area and update sidebar with default widgets
+ *
+ * @since Election_Data_Theme 1.0
+ */
+function election_data_theme_widgets_init() {
+    register_sidebar( array(
+        'name' => __( 'Primary Widget Area', 'election_data_theme' ),
+        'id' => 'sidebar-1',
+        'before_widget' => '<aside id="%1$s" class="widget %2$s">',
+        'after_widget' => '</aside>',
+        'before_title' => '<h1 class="widget-title">',
+        'after_title' => '</h1>',
+    ) );
+ 
+    register_sidebar( array(
+        'name' => __( 'Secondary Widget Area', 'election_data_theme' ),
+        'id' => 'sidebar-2',
+        'before_widget' => '<aside id="%1$s" class="widget %2$s">',
+        'after_widget' => '</aside>',
+        'before_title' => '<h1 class="widget-title">',
+        'after_title' => '</h1>',
+    ) );
+}
+add_action( 'widgets_init', 'election_data_theme_widgets_init' );
+
 $candidate_name = 'ed_candidates';
 $party_name = "{$candidate_name}_party";
 $constituency_name = "{$candidate_name}_constituency";
 $news_article_name = 'ed_news_articles';
 $reference_name = "{$news_article_name}_reference";
 $source_name = "{$news_article_name}_source";
-wp_enqueue_style( "ed_style", plugin_dir_url( __FILE__ ) . 'css/application.css' );
 
 function get_constituency( $constituency_id, $get_extra_data = true ) {
 	global $constituency_name;
@@ -34,7 +117,7 @@ function get_constituency( $constituency_id, $get_extra_data = true ) {
 		foreach ( $child_terms as $child )
 		{
 			$results['children'][$child->name] = array(
-				'url' => get_term_link( $child->id, $constituency_name ),
+				'url' => get_term_link( $child, $constituency_name ),
 				'coordinates' => get_tax_meta( $child->term_id, 'coordinates' ),
 			);
 		}
@@ -106,7 +189,7 @@ function get_party( $party_id, $get_extra_data = true ) {
 				$alt = "{$icon_type}_inactive";
 			}
 				
-			$src = plugins_url( "images/$alt.jpg", __FILE__ );
+			$src = get_template_directory_uri() . "/images/$alt.jpg";
 			$results['icon_data'][$icon_type] = array( 'url' => $url, 'src' => $src, 'alt' => ucfirst( $alt ) );
 		}
 	}
@@ -164,7 +247,7 @@ function get_candidate( $candidate_id ) {
 			$alt = $icon_type . '_inactive';
 		}
 			
-		$src = plugins_url( 'images/'. $alt . '.jpg', __FILE__ );
+		$src = get_template_directory_uri() . "/images/$alt.jpg";
 		$icon_data[$icon_type] = array( 'url' => $url, 'src' => $src, 'alt' => ucfirst( $alt ) );
 	}
 
@@ -185,7 +268,7 @@ function get_candidate( $candidate_id ) {
 	);
 }
 
-function get_news( $reference_id ) {
+function get_news( $reference_id, $page = 0, $articles_per_page = 20 ) {
 	global $news_article_name, $reference_name;
 	$args = array(
 		'post_type' => $news_article_name,
@@ -197,17 +280,29 @@ function get_news( $reference_id ) {
 				'terms' => $reference_id,
 			),
 		),
+		'meta_query' => array(
+			array(
+				'key' => 'moderation',
+				'value' => 'approved',
+				'compare' => '=',
+			),
+		),
+		'paged' => $page,
+		'posts_per_page' => $articles_per_page,
 	);
 	
 	$news_query = new WP_Query( $args ); 
 	return array(
 		'count' => $news_query->found_posts,
 		'articles' => $news_query,
+		'reference_id' => $reference_id,
 	);
 }
 
-function display_news_titles ( $news ) {
+
+function display_news_titles ( $reference_ids ) {
 	global $source_name, $reference_name, $party_name, $candidate_name;
+	$news = get_news( $reference_ids );
 	$articles = $news['articles'];
 	$last_date = '';
 	if ( $articles->have_posts() ) :
@@ -223,10 +318,12 @@ function display_news_titles ( $news ) {
 				<h4><?php echo $date; ?></h4>
 				<ul class="news">
 			<?php endif;
-			$sources = wp_get_post_terms( $article_id, $source_name );
 			$references = wp_get_post_terms( $article_id, $reference_name );
 			$mentions = array();
 			foreach ( $references as $reference ) :
+				if ( ! in_array( $reference->term_id, $reference_ids ) ) {
+					continue;
+				}
 				$reference_id = get_tax_meta( $reference->term_id, 'reference_post_id' );
 				switch ( get_tax_meta( $reference->parent, 'reference_post_id' ) ) :
 					case $party_name:
@@ -254,28 +351,71 @@ function display_news_titles ( $news ) {
 	<?php endif;
 }
 
-function display_news_summaries ( $news, $reference_id = -1 ) {
-	global $source_name;
-	$articles = $news['articles'];
+
+function display_news_pagination( $args ) {
+	$default_args = array(
+		'mid_size' => 1,
+	);
+
+	$args = wp_parse_args( $args, $default_args );
+
+	echo paginate_links( $args );
+}
+
+function display_news_summaries ( $reference_ids, $type ) {
+	$articles_per_page = 20;
+	switch ( $type ) {
+		case 'Candidate':
+			$page = get_query_var( 'page' );
+			$args = array(
+				'current' => $page ? $page : 1,
+				'format' =>'?page=%#%',
+				'add_fragment' => "#news",
+			);
+			break;
+		case 'Party':
+			$page = get_query_var( 'paged' );
+			$args = array(
+				'current' => $page ? $page : 1,
+				'add_fragment' => "#news",
+			);
+			break;
+	}
 	
+	if ( ! is_array( $reference_ids ) ) {
+		$reference_ids = array( $reference_ids );
+	}
+	global $source_name;
+	$news = get_news( $reference_ids, $page, $articles_per_page );
+	$articles = $news['articles'];
+
+	$args['total'] = round( $news['count'] / $articles_per_page );
 	if ( $articles->have_posts() ) :
-		while ( $articles->have_posts() ) :
+		if ( $news['count'] > $articles_per_page ) {
+			display_news_pagination( $args );
+		} ?>
+		<?php while ( $articles->have_posts() ) :
 			$articles->the_post();
 			$article = $articles->post;
 			$summaries = get_post_meta( $article->ID, 'summaries', true );
-			$summary = isset( $summaries[$reference_id] ) ? $summaries[$reference_id] : get_post_meta( $article->ID, 'summary', true );
-			$sources = wp_get_post_terms( $article->ID, $source_name );
-			$source = $sources[0];
-			$source_label = esc_html( $source->description ? $source->description : $source->name ); ?>
-			<div class="news-article">	
-				<h3><a href="<?php echo esc_attr( get_post_meta( $article->ID, 'url', true ) ); ?>"><?php echo get_the_title( $article->ID ); ?></a></h3>
-				<p class="date"><?php echo get_the_date( 'l, j F Y', $article->ID ); ?></p>
-				<p class="summary" >
-					<em><?php echo $source_label; ?></em>
-					- <?php echo $summary; ?>
-				</p>
-			</div>
-		<?php endwhile;
+			foreach ( $reference_ids as $reference_id ) :
+				if( empty( $summaries[$reference_id] ) ){
+					continue;
+				}
+				$summary = $summaries[$reference_id];
+				$sources = wp_get_post_terms( $article->ID, $source_name );
+				$source = $sources[0];
+				$source_label = esc_html( $source->description ? $source->description : $source->name ); ?>
+				<div class="news-article">	
+					<h3><a href="<?php echo esc_attr( get_post_meta( $article->ID, 'url', true ) ); ?>"><?php echo get_the_title( $article->ID ); ?></a></h3>
+					<p class="date"><?php echo get_the_date( 'l, j F Y', $article->ID ); ?></p>
+					<p class="summary" >
+						<em><?php echo $source_label; ?></em>
+						- <?php echo $summary; ?>
+					</p>
+				</div>
+			<?php endforeach;
+		endwhile;
 	else : ?>
 		<em>No articles found yet.</em>
 	<?php endif;
@@ -361,14 +501,29 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 	</div>
 <?php }
 
-function display_header() {
-	$site_name = get_bloginfo( 'name' );
-	$site_tag_line = get_bloginfo( 'description' );
-	?>
-	<header>
-		<h1><a href="<?php echo get_site_url() . '/'; ?>"><?php echo $site_name; ?></a></h1>
-		<?php if ( !empty( $site_tag_line ) ) : ?>
-			<h3><?php echo $site_tag_line; ?><h3>
-		<?php endif; ?>
-	</header>
-<?php }
+
+function display_party_candidates( $candidate_query, $party, &$references )
+{
+	while ( $candidate_query->have_posts() ) {
+		$candidate_query->the_post();
+		$candidate_id = $candidate_query->post->ID;
+		$candidate = get_candidate( $candidate_id );
+		$constituency = get_constituency_from_candidate( $candidate_id );
+		$references[] = $candidate['reference_id'];
+		$candidate_news = get_news( $candidate['reference_id'] ); 
+		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'constituency', 'news' ), 'constituency' );
+	}
+}
+
+function display_constituency_candidates( $candidate_query, $constituency, &$references ) {
+	while ( $candidate_query->have_posts() ) {
+		$candidate_query->the_post();
+		$candidate_id = $candidate_query->post->ID;
+		$candidate = get_candidate( $candidate_id );
+		$party = get_party_from_candidate( $candidate_id );
+		$references[] = $candidate['reference_id'];
+		$candidate_news = get_news( $candidate['reference_id'] );
+		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'news' ), 'name' );
+	}
+}
+

@@ -85,6 +85,7 @@ class Election_Data_Candidate {
 					'desc' => __( "Enter the candidate's phone number." ),
 					'type' => 'text',
 					'std' => '',
+					'imported' => true,
 				),
 				'website' => array(
 					'label' => __( 'Website' ),
@@ -92,6 +93,7 @@ class Election_Data_Candidate {
 					'desc' => __( "Enter the URL to the candidate's website." ),
 					'type' => 'url',
 					'std' => '',
+					'imported' => true,
 				),
 				'email' => array(
 					'label' => __( 'Email Address' ),
@@ -99,6 +101,7 @@ class Election_Data_Candidate {
 					'desc' => __( "Enter the candidate's email address." ),
 					'type' => 'email',
 					'std' => '',
+					'imported' => true,
 				),
 				'facebook' => array(
 					'label' => __( 'Facbook Page' ),
@@ -106,6 +109,7 @@ class Election_Data_Candidate {
 					'desc' => __( "Enter the URL to the canidate's facebook page." ),
 					'type' => 'url',
 					'std' => '',
+					'imported' => true,
 				),
 				'youtube' => array(
 					'label' => __( 'Youtube Channel or Video' ),
@@ -113,6 +117,7 @@ class Election_Data_Candidate {
 					'desc' => __( "Enter the URL to the candidate's youtube channel or video" ),
 					'type' => 'url',
 					'std' => '',
+					'imported' => true,
 				),
 				'twitter' => array(
 					'label' => __( 'Twitter Feed' ),
@@ -120,6 +125,7 @@ class Election_Data_Candidate {
 					'desc' => __( "Enter the URL to the candidate's twitter feed." ),
 					'type' => 'url',
 					'std' => '',
+					'imported' => true,
 				),
 				'incumbent_year' => array(
 					'label' => __( 'Year Previously Elected' ),
@@ -127,6 +133,7 @@ class Election_Data_Candidate {
 					'desc' => __( 'If the candidate is the incumbent, enter the year he/she was elected.' ),
 					'type' => 'text',
 					'std' => '',
+					'imported' => true,
 				),
 				'party_leader' => array(
 					'label' => __( 'Party Leader' ),
@@ -134,11 +141,13 @@ class Election_Data_Candidate {
 					'desc' => __( 'Indicate if the candidate is the party leader.' ),
 					'type' => 'checkbox',
 					'std' => '',
+					'imported' => true,
 				),
 				'reference' => array(
 					'id' => 'reference',
 					'type' => 'hidden',
 					'std' => '',
+					'imported' => false,
 				),
 			),
 			'admin_columns' => array( 'phone', 'email', 'website', 'party_leader' ),
@@ -208,6 +217,7 @@ class Election_Data_Candidate {
 						'std' => '#000000',
 						'desc' => __( 'Select a colour to identify the party.' ),
 						'label' => __( 'Colour' ),
+						'imported' => true,
 					),
 					array(
 						'type' => 'image',
@@ -215,6 +225,7 @@ class Election_Data_Candidate {
 						'desc' => __( 'Select a logo for the party.' ),
 						'label' => __( 'Logo' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'url',
@@ -222,6 +233,7 @@ class Election_Data_Candidate {
 						'desc' => __( "Enter the URL to the party's web site." ),
 						'label' => __( 'Web Site URL' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'text',
@@ -229,6 +241,7 @@ class Election_Data_Candidate {
 						'desc' => __( "Enter the party's phone number." ),
 						'label' => __( 'Phone Number' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'text',
@@ -236,6 +249,7 @@ class Election_Data_Candidate {
 						'desc' => __( "Enter the party's address." ),
 						'label' => __( 'Address' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'email',
@@ -243,6 +257,7 @@ class Election_Data_Candidate {
 						'desc' => __( "Enter the party's email address." ),
 						'label' => __( 'Email Address' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'url',
@@ -250,6 +265,7 @@ class Election_Data_Candidate {
 						'desc' => __( "Enter the URL to the party's facebook page." ),
 						'label' => __( 'Facbook Page' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'url',
@@ -257,6 +273,7 @@ class Election_Data_Candidate {
 						'desc' => __( "Enter the URL to the party's youtube channel or video" ),
 						'label' => __( 'Youtube Channel or Video' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'url',
@@ -264,11 +281,13 @@ class Election_Data_Candidate {
 						'desc' => __( "Enter the URL to the party's twitter feed." ),
 						'label' => __( 'Twitter Feed' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'hidden',
 						'id' => 'reference',
 						'std' => '',
+						'imported' => false,
 					),
 				),
 			),
@@ -281,6 +300,7 @@ class Election_Data_Candidate {
 						'desc' => __( "A map of the child constituencies." ),
 						'label' => __( "Constituency Map" ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'text',
@@ -288,6 +308,7 @@ class Election_Data_Candidate {
 						'desc' => __( 'HTML map coordinates for constituency location on parent constituencies map. You can generate these coordinates by using an online map tool available <a href="https://www.google.com/search?q=html+map+generator+online">here</a>' ),
 						'label' => __( 'Coordinates' ),
 						'std' => '',
+						'imported' => true,
 					),
 					array(
 						'type' => 'wysiwyg',
@@ -295,6 +316,7 @@ class Election_Data_Candidate {
 						'desc' => __( 'A description of the constituency. ' ),
 						'label' => __( 'Details' ),
 						'std' => '',
+						'imported' => true,
 					),
 				),
 			),
@@ -445,7 +467,7 @@ SQL;
 	
 	// Allow for default template files to be a part of the plugin.
 	function include_template_function( $template_path ) {
-		$template_file = '';
+		/*$template_file = '';
 		switch ( get_query_var( 'post_type' ) ) {
 			case $this->custom_post['name']:
 				if ( is_single() )
@@ -478,7 +500,7 @@ SQL;
 				$template_path = $plugin_path;
 			}
 		}
-		
+		*/
 		return $template_path;
 	}
 	
@@ -509,6 +531,21 @@ SQL;
 		}
 	}
 	
+	function set_main_query_parameters( $query ) {
+		if( is_admin() || !$query->is_main_query() ) {
+			return;
+		}
+		
+		if ( is_tax( $this->taxonomies['party']['name'] ) ) {
+			$query->set( 'orderby', "taxonomy-{$this->taxonomies['constituency']['name']}" );
+			$query->set( 'order', 'ASC' );
+			$query->set( 'nopaging', 'true' );
+		} elseif ( is_tax( $this->taxonomies['constituency']['name'] ) ) {
+			$query->set( 'orderby', 'rand' );
+			$query->set( 'nopaging', 'true' );
+		}
+	}
+	
 	function setup_public_scripts() {
 		wp_enqueue_style( 'ed_' . $this->custom_post['name'] . '_style', plugin_dir_url( __FILE__ ) . 'css/application.css' );
 	}
@@ -532,6 +569,7 @@ SQL;
 		add_action( 'init',  array( $this, 'initialize' ) );
 		add_filter( 'template_include',  array( $this, 'include_template_function' ), 1 );
 		add_filter( 'wp_enqueue_scripts',  array( $this, 'setup_public_scripts' ) );
+		add_filter( 'pre_get_posts', array( $this, 'set_main_query_parameters' ) );
 	}
 		
 	function export_xml( $xml ) {
@@ -603,6 +641,7 @@ SQL;
 	function erase_data() {
 		$args = array(
 			'post_type' => $this->custom_post['name'],
+			'nopaging' => true,
 		);
 		$query = new WP_Query( $args );
 		while ( $query->have_posts() ) {

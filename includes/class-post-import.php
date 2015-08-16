@@ -111,7 +111,7 @@ class Post_Import {
 		$posts_by_title = $current_posts['post_title'];
 		$posts_by_name = $current_posts['post_name'];
 		$post = null;
-		if ( isset( $post_fields['post_name'] ) && !empty( $data[$post_fields['post_name']] ) && !empty( $posts_by_title[$data[$post_fields['post_name']]] ) ) {
+		if ( isset( $post_fields['post_name'] ) && !empty( $data[$post_fields['post_name']] ) && !empty( $posts_by_name[$data[$post_fields['post_name']]] ) ) {
 			$post = $posts_by_name[$data[$post_fields['post_name']]];
 		}
 		if ( isset( $post_fields['post_title'] ) && !empty( $data[$post_fields['post_title']] ) && !empty( $posts_by_title[$data[$post_fields['post_title']]] ) ) {
@@ -146,6 +146,10 @@ class Post_Import {
 				$args[$post_name] = $data[$field_name];
 			}
 			
+			if ( empty( $args['post_name'] ) ) {
+				$args['post_name'] = sanitize_title( isset( $args['post_title'] ) ? $args['post_title'] : '' );
+			}
+			
 			$post_id = wp_insert_post( $args );
 			return get_post( $post_id );
 		}
@@ -160,14 +164,14 @@ class Post_Import {
 		}
 		
 		if ( $updated ) {
-			wp_update_post( $args );
+			wp_update_post( $post, $args );
 		}
-		
+
 		return $post;
 	}
 	
 	static function get_current_posts( $post_type ) {
-		$query = new WP_Query( array( 'post_type' => $post_type ) );
+		$query = new WP_Query( array( 'post_type' => $post_type, 'nopaging' => true ) );
 		$posts = array('post_title' => array(), 'post_name' => array());
 		while ( $query->have_posts() ) {
 			$query->the_post();
@@ -178,20 +182,25 @@ class Post_Import {
 		
 		return $posts;
 	}
+	
+	static function apply_defaults( $data, $defaults ) {
+		foreach ( $defaults as $label => $value ) {
+			if ( empty( $data[$label] ) ) {
+				$data[$label] = $value ;
+			}
+		}
+		
+		return $data;
+	}	
 
-	static function import_post_csv( $csv, $mode, $post_type, $post_meta, $post_fields, $post_image_heading, $taxonomies ) {
-		$meta_fields = empty( $post_meta ) ? array() : $post_meta->get_field_names();
+	static function import_post_csv( $csv, $mode, $post_type, $post_meta, $post_fields, $post_image_heading, $taxonomies, $default_values = array(), $required_fields = null ) {
 		$headings = fgetcsv( $csv );
 		$found = true;
-		foreach ( array_merge( $post_fields, $taxonomies, $meta_fields ) as $field ) {
-			$found &= in_array( $field, $headings );
+		if ( $required_fields === null ) {
+			$required_fields = $post_fields;
 		}
-		if ( $post_image_heading ) {
-			foreach ( array( 'base64', 'filename', 'url' ) as $suffix ) {
-				$post_image_fields[$suffix] = "{$post_image_heading}_$suffix";
-			}
-			
-			$found &= ( in_array( $post_image_fields['base64'], $headings ) && in_array( $post_image_fields['filename'], $headings ) ) || in_array( $post_image_fields['url'], $headings );
+		foreach ( $required_fields as $field ) {
+			$found &= in_array( $field, $headings );
 		}
 		
 		if ( !$found ) {
@@ -199,9 +208,15 @@ class Post_Import {
 		}
 		
 		$current_posts = self::get_current_posts( $post_type );
+		
 		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
 			$data = array_combine( $headings, $data );
+			$data = self::apply_defaults( $data, $default_values );
 			$post = self::get_or_create_post( $post_type, $current_posts, $data, $post_fields, $mode );
+			
+			if ( ! $post ) {
+				continue;
+			}
 			
 			if ( $post_image_heading ) {
 				$image_id = get_post_thumbnail_id( $post->ID );
@@ -224,22 +239,22 @@ class Post_Import {
 			if ( $post_meta ) {
 				$post_meta->update_field_values( $post->ID, $data, $mode );
 			}
+		
 		}
 	}
 	
-	function import_taxonomy_csv( $csv, $mode, $taxonomy, $taxonomy_name, $taxonomy_fields, $taxonomy_meta = null, $parent_field = null ) {
+	function import_taxonomy_csv( $csv, $mode, $taxonomy, $taxonomy_name, $taxonomy_fields, $taxonomy_meta = null, $parent_field = null, $default_values = array(), $required_fields = null ) {
 		$headings = fgetcsv( $csv );
 		$found = true;
-		$meta_fields = empty( $taxonomy_meta ) ? array() : $taxonomy_meta->get_field_names( 'non_image' );
-		$image_fields = empty( $taxonomy_meta ) ? array() : $taxonomy_meta->get_field_names( 'image' );
-		foreach ( array_merge( $taxonomy_fields, $meta_fields ) as $field ) {
-			$found &= in_array( $field, $headings );
+		if ( $required_fields === null ){
+			$required_fields = $taxonomy_fields;
+			if ( $parent_field )
+			{
+				$required_fields[] = $parent_field;
+			}
 		}
-		if ( $parent_field ) {
-			$found &= in_array( $parent_field, $headings );
-		}
-		foreach ( $image_fields as $field ) {
-			$found &= ( in_array( $field['base64'], $headings ) && in_array( $field['filename'], $headings ) ) || in_array( $field['url'], $headings );
+		foreach ( $required_fields as $field ) {
+			$found &= in_array( $field, $headings ) || isset( $default_values[$field] );
 		}
 		
 		if ( !$found )
@@ -249,24 +264,12 @@ class Post_Import {
 
 		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
 			$data = array_combine( $headings, $data );
+			$data = self::apply_defaults( $data, $default_values );
 			$term = self::get_or_create_term( $taxonomy_name, $data, $taxonomy_fields, $parent_field, $mode );
-			$current_meta = get_tax_meta_all( $term['term_id'] );
-			foreach ( $meta_fields as $field_name ) {
-				if ( $mode == 'overwrite' || empty( $current_meta[$field_name] ) ) {
-					update_tax_meta( $term['term_id'], $field_name, $data[$field_name] );
-				}
-			}
-			foreach ( $image_fields as $field_name ) {
-				if ( $mode == 'overwrite' || empty( $current_meta[$field_name['']] ) ) {
-					$attachment_id = self::add_image_data( $data, $field_name[''] );
-					if ( $attachment_id ) {
-						$image_data = array (
-							'id' => $attachment_id,
-							'url' => wp_get_attachment_url( $attachment_id ),
-						);
-						update_tax_meta( $term['term_id'], $field_name[''], $image_data );
-					}
-				}
+
+			if ( $taxonomy_meta )
+			{
+				$taxonomy_meta->update_field_values( $term['term_id'], $data, $mode );
 			}
 		}
 		

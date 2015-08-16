@@ -18,13 +18,18 @@ jQuery(document).ready( function($) {
 					continue;
 				}
 				var value = $( '#' + field + '-' + post_id ).text();
-				var input = edit_row.find('input[name="' + pm_post_meta[field] + '"]');
+				var input = edit_row.find('[name="' + pm_post_meta[field] + '"]');
 				switch(input[0].type) {
 					case 'checkbox':
 					case 'radio':
 						if ( value ) {
 							input.prop('checked', 'True');
 						}
+						break;
+					case 'select-one':
+						var x = window['pm_post_meta_pulldown_' + field];
+						var y = x[value];
+						input.val(window['pm_post_meta_pulldown_' + field][value]);
 						break;
 					default:
 						input.val(value);
@@ -43,7 +48,7 @@ jQuery(document).ready( function($) {
 				continue;
 			}
 			
-			input = row.find('input[name="' + pm_post_meta[field] + '"]');
+			input = row.find('[name="' + pm_post_meta[field] + '"]');
 			switch (input[0].type) {
 				case 'radio':
 				case 'checkbox':

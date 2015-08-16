@@ -28,6 +28,7 @@ class Post_Export {
 			'post_type' => $post_type,
 			'orderby' => 'name',
 			'order' => 'ASC',
+			'nopaging' => true,
 		);
 
 		$query = new WP_Query( $args );

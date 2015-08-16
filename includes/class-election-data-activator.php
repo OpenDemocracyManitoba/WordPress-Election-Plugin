@@ -43,6 +43,10 @@ class Election_Data_Activator {
 		flush_rewrite_rules();
 		
 		$news_articles->setup_cron();
+		
+		//Election_Data_Options::update_option(
+		
+		switch_theme('ElectionData' );
 	}
-
+	
 }

@@ -300,7 +300,7 @@ class Election_Data {
 		return $success;
 	}
 	
-	public static function export( $file_type ) {		
+	public static function export( $file_type ) {
 		$candidate = new Election_Data_Candidate( false );
 		$news_article = new Election_Data_News_Article( false );
 
@@ -377,3 +377,11 @@ class Election_Data {
 		wp_die();
 	}
 }
+
+
+/*add_filter('found_posts', 'update_found_posts_for_party', 1, 2 );
+function update_found_posts_for_party( $found_posts, $query ) {
+	error_log( "Running the filter" ) ;
+	remove_filter('found_posts', 'update_found_posts_for_party', 1 );
+	return $found_posts;
+}*/
