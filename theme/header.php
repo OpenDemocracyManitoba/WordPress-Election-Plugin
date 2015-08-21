@@ -1,3 +1,4 @@
+
 <?php
 /**
  * The Header for our theme.
@@ -56,4 +57,5 @@ echo ' | ' . sprintf( __( 'Page %s', 'election_data_theme' ), max( $paged, $page
 			<nav role="navigation" class="site-navigation main-navigation">
 			</nav><!-- .site-navigation .main-navigation -->
 		</header><!-- #masthead .site-header -->
+		<?php wp_nav_menu( array( 'theme_location' => 'header-menu', 'container_class' => 'menu hidden_block_when_mobile', 'menu_class' => '' ) ); ?>
 		<div id="main" role="main">

@@ -2,6 +2,8 @@
 
 /**
  * Post Meta Data handler.
+ * Takes care of displaying the post meta data on the add/edit screens and
+ * takes care of adding/updating the post meta in the database.
  *
  * @package		Election_Data
  * @since		1.0
@@ -39,6 +41,19 @@ class Post_Meta {
 	protected $admin_columns;
 	
 	/**
+	 * The meta fields for which to add a filter.
+	 * The field name is the key to the dictionary.
+	 * An array of values generates a pull down list with the given values.
+	 * Anything else generates a text input field.
+	 *
+	 * @var array
+	 * @access protected
+	 * @since 1.0
+	 *
+	 */
+	protected $post_meta_filters;
+	
+	/**
 	 * The post type for the custom fields.
 	 *
 	 * @var string
@@ -64,6 +79,7 @@ class Post_Meta {
 	 *
 	 */
 	static protected $allowed_admin_column_types;
+
 	/**
 	 * Constructer
 	 *
@@ -548,6 +564,44 @@ class Post_Meta {
 				echo $value ? 'X' : '';
 				break;
 		}
+	}
+	
+	
+	function admin_posts_filter( $query )
+	{
+		global $pagenow;
+		if ( is_admin() && $pagenow=='edit.php' && !empty($_GET['ADMIN_FILTER_FIELD_NAME']) ) {
+			$query->query_vars['meta_key'] = $_GET['ADMIN_FILTER_FIELD_NAME'];
+			if ( !empty($_GET['ADMIN_FILTER_FIELD_VALUE']))
+				$query->query_vars['meta_value'] = $_GET['ADMIN_FILTER_FIELD_VALUE'];
+		}
+	}
+	
+	function admin_posts_filter_restrict_manage_posts()
+	{
+/*		global $wpdb;
+		$sql = 'SELECT DISTINCT meta_key FROM '.$wpdb->postmeta.' ORDER BY 1';
+		$fields = $wpdb->get_results($sql, ARRAY_N);
+	?>
+	<select name="ADMIN_FILTER_FIELD_NAME">
+	<option value=""><?php _e('Filter By Custom Fields', 'baapf'); ?></option>
+	<?php
+		$current = isset($_GET['ADMIN_FILTER_FIELD_NAME'])? $_GET['ADMIN_FILTER_FIELD_NAME']:'';
+		$current_v = isset($_GET['ADMIN_FILTER_FIELD_VALUE'])? $_GET['ADMIN_FILTER_FIELD_VALUE']:'';
+		foreach ($fields as $field) {
+			if (substr($field[0],0,1) != "_"){
+			printf
+				(
+					'<option value="%s"%s>%s</option>',
+					$field[0],
+					$field[0] == $current? ' selected="selected"':'',
+					$field[0]
+				);
+			}
+		}
+	?>
+	</select> <?php _e('Value:', 'baapf'); ?><input type="TEXT" name="ADMIN_FILTER_FIELD_VALUE" value="<?php echo $current_v; ?>" />
+	<?php*/
 	}
 	
 	public function get_field_names() {

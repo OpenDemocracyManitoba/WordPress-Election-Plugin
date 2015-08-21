@@ -33,7 +33,7 @@ class Election_Data_Deactivator {
 		flush_rewrite_rules();
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-news-article.php';
 		
-		$news_articles = new Election_Data_News_Article();
+		$news_articles = new Election_Data_News_Article( '', '', false );
 		$news_articles->stop_cron();
 	}
 

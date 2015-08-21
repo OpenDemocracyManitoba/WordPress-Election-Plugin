@@ -10,9 +10,13 @@
  * @package    Election_Data
  * @subpackage Election_Data/includes
  */
+ 
+require_once plugin_dir_path( __FILE__ ) . 'class-custom-post.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-post-import.php';
+require_once plugin_dir_path( __FILE__ ) . 'class-post-export.php';
 
 /**
- * The candidate custom post type.
+ * Sets up and handles the candidate custom post type.
  *
  *
  * @since      1.0.0
@@ -20,27 +24,53 @@
  * @subpackage Election_Data/includes
  * @author     Robert Burton <RobertBurton@gmail.com>
  */
-
-require_once plugin_dir_path( __FILE__ ) . 'class-post-meta.php';
-require_once plugin_dir_path( __FILE__ ) . 'class-taxonomy-meta.php';
-require_once plugin_dir_path( __FILE__ ) . 'class-post-import.php';
-require_once plugin_dir_path( __FILE__ ) . 'class-post-export.php';
-
 class Election_Data_Candidate {
-	// Definition of the custom post type.
+	/**
+	 * The ED_Custom_Post_Type object representing the candidates custom post type, and the party and constituency taxonomies.
+	 *
+	 * @var object
+	 * @access protected
+	 * @since 1.0
+	 *
+	 */
 	protected $custom_post;
 	
-	// Definition of the Party and Constituency taxonomies.
-	protected $taxonomies;
+	/**
+	 * The definition of the taxonomy names.
+	 *
+	 * @var array
+	 * @access public
+	 * @since 1.0
+	 *
+	 */
+	public $taxonomies;
 	
-	protected $post_meta;
-	
-	protected $taxonomy_meta;
-	
-	function __construct() {
-		$this->custom_post = array(
-			'name' => 'ed_candidates',
-			'args' => array(
+	/**
+	 * Stores the name of the custom post type.
+	 *
+	 * @var string
+	 * @access public
+	 * @since 1.0
+	 *
+	 */
+	public $post_type;
+
+	/**
+	 * Constructor
+	 *
+	 * @access public
+	 * @since 1.0
+	 * @param boolean $define_hooks
+	 *
+	 */
+	public function __construct( $define_hooks = true ) {
+		$this->post_type = 'ed_candidates';
+		$this->taxonomies = array(
+			'party' => "{$this->post_type}_party",
+			'constituency' => "{$this->post_type}_constituency",
+		);
+		$args = array(
+			'custom_post_args' => array(
 				'labels' => array(
 					'name' => __( 'Candidates' ),
 					'singular_name' => __( 'Candidate' ),
@@ -61,103 +91,99 @@ class Election_Data_Candidate {
 				'has_archive' => true,
 				'query_var' => __( 'candidate' ),
 				'rewrite' => array( 'slug' => __( 'candidates' ), 'with_front' => false ),
-				'enter_title_here' =>  __( 'Enter Candidate Name' ),
-				'admin_column_names' => array( 'title' => __( 'Candidate Name' ) ),
-				'remove_admin_columns' => array( 'date' ),
-				'remove_admin_column_date_filter' => true,
-				'hide_quick_edit_fields' => array( 'password', 'date' ),
-				'quick_edit_column_names' => array( 'title' => __( 'Name' ) ),
-			)
-		);
-		
-		$custom_post_meta = array(
-			'meta_box' => array(
-				'id' => 'election_data_candidate_meta_box',
-				'title' => __( 'Candidate Details' ),
-				'post_type' => $this->custom_post['name'],
-				'context' => 'normal',
-				'priority' => 'high',
+				
 			),
-			'fields' => array(
-				'phone' => array(
-					'label' => __( 'Phone Number' ),
-					'id' => 'phone',
-					'desc' => __( "Enter the candidate's phone number." ),
-					'type' => 'text',
-					'std' => '',
-					'imported' => true,
+			'admin_column_names' => array( 'title' => __( 'Candidate Name' ) ),
+			'admin_field_names' => array( 'title' => __( 'Name' ), 'enter_title_here' =>  __( 'Enter Candidate Name' ) ),
+			'hidden_admin_columns' => array( 'date' ),
+			'hidden_admin_fields' => array( 'password', 'date' ),
+			'hidden_admin_filters' => array( 'date' ),
+			'taxonomy_filters' => array( $this->taxonomies['party'], $this->taxonomies['constituency'] ),
+			'sortable_taxonomies' => array( $this->taxonomies['party'], $this->taxonomies['constituency'] ),
+			'custom_post_meta' => array(
+				'meta_box' => array(
+					'id' => 'election_data_candidate_meta_box',
+					'title' => __( 'Candidate Details' ),
+					'post_type' => $this->post_type,
+					'context' => 'normal',
+					'priority' => 'high',
 				),
-				'website' => array(
-					'label' => __( 'Website' ),
-					'id' => 'website',
-					'desc' => __( "Enter the URL to the candidate's website." ),
-					'type' => 'url',
-					'std' => '',
-					'imported' => true,
+				'fields' => array(
+					'phone' => array(
+						'label' => __( 'Phone Number' ),
+						'id' => 'phone',
+						'desc' => __( "Enter the candidate's phone number." ),
+						'type' => 'text',
+						'std' => '',
+						'imported' => true,
+					),
+					'website' => array(
+						'label' => __( 'Website' ),
+						'id' => 'website',
+						'desc' => __( "Enter the URL to the candidate's website." ),
+						'type' => 'url',
+						'std' => '',
+						'imported' => true,
+					),
+					'email' => array(
+						'label' => __( 'Email Address' ),
+						'id' => 'email',
+						'desc' => __( "Enter the candidate's email address." ),
+						'type' => 'email',
+						'std' => '',
+						'imported' => true,
+					),
+					'facebook' => array(
+						'label' => __( 'Facbook Page' ),
+						'id' => 'facebook',
+						'desc' => __( "Enter the URL to the canidate's facebook page." ),
+						'type' => 'url',
+						'std' => '',
+						'imported' => true,
+					),
+					'youtube' => array(
+						'label' => __( 'Youtube Channel or Video' ),
+						'id' => 'youtube',
+						'desc' => __( "Enter the URL to the candidate's youtube channel or video" ),
+						'type' => 'url',
+						'std' => '',
+						'imported' => true,
+					),
+					'twitter' => array(
+						'label' => __( 'Twitter Feed' ),
+						'id' => 'twitter',
+						'desc' => __( "Enter the URL to the candidate's twitter feed." ),
+						'type' => 'url',
+						'std' => '',
+						'imported' => true,
+					),
+					'incumbent_year' => array(
+						'label' => __( 'Year Previously Elected' ),
+						'id' => 'incumbent_year',
+						'desc' => __( 'If the candidate is the incumbent, enter the year he/she was elected.' ),
+						'type' => 'text',
+						'std' => '',
+						'imported' => true,
+					),
+					'party_leader' => array(
+						'label' => __( 'Party Leader' ),
+						'id' => 'party_leader',
+						'desc' => __( 'Indicate if the candidate is the party leader.' ),
+						'type' => 'checkbox',
+						'std' => '',
+						'imported' => true,
+					),
+					'reference' => array(
+						'id' => 'reference',
+						'type' => 'hidden',
+						'std' => '',
+						'imported' => false,
+					),
 				),
-				'email' => array(
-					'label' => __( 'Email Address' ),
-					'id' => 'email',
-					'desc' => __( "Enter the candidate's email address." ),
-					'type' => 'email',
-					'std' => '',
-					'imported' => true,
-				),
-				'facebook' => array(
-					'label' => __( 'Facbook Page' ),
-					'id' => 'facebook',
-					'desc' => __( "Enter the URL to the canidate's facebook page." ),
-					'type' => 'url',
-					'std' => '',
-					'imported' => true,
-				),
-				'youtube' => array(
-					'label' => __( 'Youtube Channel or Video' ),
-					'id' => 'youtube',
-					'desc' => __( "Enter the URL to the candidate's youtube channel or video" ),
-					'type' => 'url',
-					'std' => '',
-					'imported' => true,
-				),
-				'twitter' => array(
-					'label' => __( 'Twitter Feed' ),
-					'id' => 'twitter',
-					'desc' => __( "Enter the URL to the candidate's twitter feed." ),
-					'type' => 'url',
-					'std' => '',
-					'imported' => true,
-				),
-				'incumbent_year' => array(
-					'label' => __( 'Year Previously Elected' ),
-					'id' => 'incumbent_year',
-					'desc' => __( 'If the candidate is the incumbent, enter the year he/she was elected.' ),
-					'type' => 'text',
-					'std' => '',
-					'imported' => true,
-				),
-				'party_leader' => array(
-					'label' => __( 'Party Leader' ),
-					'id' => 'party_leader',
-					'desc' => __( 'Indicate if the candidate is the party leader.' ),
-					'type' => 'checkbox',
-					'std' => '',
-					'imported' => true,
-				),
-				'reference' => array(
-					'id' => 'reference',
-					'type' => 'hidden',
-					'std' => '',
-					'imported' => false,
-				),
+				'admin_columns' => array( 'phone', 'email', 'website', 'party_leader' ),
 			),
-			'admin_columns' => array( 'phone', 'email', 'website', 'party_leader' ),
-		);
-
-		$this->taxonomies = array(
-			'party' => array(
-				'name' => $this->custom_post['name'] . '_party',
-				'post_type' => $this->custom_post['name'],
-				'args' => array(
+			'taxonomy_args' => array(
+				$this->taxonomies['party'] => array(
 					'labels' => array(
 						'name' => _x( 'Parties', 'taxonomy general name' ),
 						'singular_name' => _x( 'Party', 'taxonomy general name' ),
@@ -178,12 +204,7 @@ class Election_Data_Candidate {
 					'query_var' => 'party',
 					'rewrite' => array( 'slug' => 'parties', 'with_front' => false )
 				),
-				'use_radio_button' => false,
-			),
-			'constituency' => array(
-				'name' => $this->custom_post['name'] . '_constituency',
-				'post_type' => $this->custom_post['name'],
-				'args' => array(
+				$this->taxonomies['constituency'] => array(
 					'labels' => array(
 						'name' => _x( 'Constituencies', 'taxonomy general name' ),
 						'singular_name' => _x( 'Constituency', 'taxonomy general name' ),
@@ -205,401 +226,236 @@ class Election_Data_Candidate {
 					'rewrite' => array( 'slug' => 'constituencies', 'with_front' => false )
 				),
 			),
-		);
-		
-		$taxonomy_meta = array(
-			'party' => array(
-				'taxonomy' => $this->taxonomies['party']['name'],
-				'fields' => array(
-					array(
-						'type' => 'color',
-						'id' => 'colour',
-						'std' => '#000000',
-						'desc' => __( 'Select a colour to identify the party.' ),
-						'label' => __( 'Colour' ),
-						'imported' => true,
+			'taxonomy_meta' => array(
+				'party' => array(
+					'taxonomy' => $this->taxonomies['party'],
+					'fields' => array(
+						array(
+							'type' => 'color',
+							'id' => 'colour',
+							'std' => '#000000',
+							'desc' => __( 'Select a colour to identify the party.' ),
+							'label' => __( 'Colour' ),
+							'imported' => true,
+						),
+						array(
+							'type' => 'image',
+							'id' => 'logo',
+							'desc' => __( 'Select a logo for the party.' ),
+							'label' => __( 'Logo' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'url',
+							'id' => 'website',
+							'desc' => __( "Enter the URL to the party's web site." ),
+							'label' => __( 'Web Site URL' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'text',
+							'id' => 'phone',
+							'desc' => __( "Enter the party's phone number." ),
+							'label' => __( 'Phone Number' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'text',
+							'id' => 'address',
+							'desc' => __( "Enter the party's address." ),
+							'label' => __( 'Address' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'email',
+							'id' => 'email',
+							'desc' => __( "Enter the party's email address." ),
+							'label' => __( 'Email Address' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'url',
+							'id' => 'facebook',
+							'desc' => __( "Enter the URL to the party's facebook page." ),
+							'label' => __( 'Facbook Page' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'url',
+							'id' => 'youtube',
+							'desc' => __( "Enter the URL to the party's youtube channel or video" ),
+							'label' => __( 'Youtube Channel or Video' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'url',
+							'id' => 'twitter',
+							'desc' => __( "Enter the URL to the party's twitter feed." ),
+							'label' => __( 'Twitter Feed' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'hidden',
+							'id' => 'reference',
+							'std' => '',
+							'imported' => false,
+						),
 					),
-					array(
-						'type' => 'image',
-						'id' => 'logo',
-						'desc' => __( 'Select a logo for the party.' ),
-						'label' => __( 'Logo' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'url',
-						'id' => 'website',
-						'desc' => __( "Enter the URL to the party's web site." ),
-						'label' => __( 'Web Site URL' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'text',
-						'id' => 'phone',
-						'desc' => __( "Enter the party's phone number." ),
-						'label' => __( 'Phone Number' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'text',
-						'id' => 'address',
-						'desc' => __( "Enter the party's address." ),
-						'label' => __( 'Address' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'email',
-						'id' => 'email',
-						'desc' => __( "Enter the party's email address." ),
-						'label' => __( 'Email Address' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'url',
-						'id' => 'facebook',
-						'desc' => __( "Enter the URL to the party's facebook page." ),
-						'label' => __( 'Facbook Page' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'url',
-						'id' => 'youtube',
-						'desc' => __( "Enter the URL to the party's youtube channel or video" ),
-						'label' => __( 'Youtube Channel or Video' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'url',
-						'id' => 'twitter',
-						'desc' => __( "Enter the URL to the party's twitter feed." ),
-						'label' => __( 'Twitter Feed' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'hidden',
-						'id' => 'reference',
-						'std' => '',
-						'imported' => false,
+				),
+				'constituency' => array(
+					'taxonomy' => $this->taxonomies['constituency'],
+					'fields' => array(
+						array(
+							'type' => 'image',
+							'id' => 'map',
+							'desc' => __( "A map of the child constituencies." ),
+							'label' => __( "Constituency Map" ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'text',
+							'id' => 'coordinates',
+							'desc' => __( 'HTML map coordinates for constituency location on parent constituencies map. You can generate these coordinates by using an online map tool available <a href="https://www.google.com/search?q=html+map+generator+online">here</a>' ),
+							'label' => __( 'Coordinates' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
+							'type' => 'wysiwyg',
+							'id' => 'details',
+							'desc' => __( 'A description of the constituency. ' ),
+							'label' => __( 'Details' ),
+							'std' => '',
+							'imported' => true,
+						),
 					),
 				),
 			),
-			'constituency' => array(
-				'taxonomy' => $this->taxonomies['constituency']['name'],
-				'fields' => array(
-					array(
-						'type' => 'image',
-						'id' => 'map',
-						'desc' => __( "A map of the child constituencies." ),
-						'label' => __( "Constituency Map" ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'text',
-						'id' => 'coordinates',
-						'desc' => __( 'HTML map coordinates for constituency location on parent constituencies map. You can generate these coordinates by using an online map tool available <a href="https://www.google.com/search?q=html+map+generator+online">here</a>' ),
-						'label' => __( 'Coordinates' ),
-						'std' => '',
-						'imported' => true,
-					),
-					array(
-						'type' => 'wysiwyg',
-						'id' => 'details',
-						'desc' => __( 'A description of the constituency. ' ),
-						'label' => __( 'Details' ),
-						'std' => '',
-						'imported' => true,
-					),
-				),
-			),
 		);
 		
-		$this->post_meta = new Post_Meta( 
-			$custom_post_meta['meta_box'],
-			$custom_post_meta['fields'],
-			$custom_post_meta['admin_columns']
-		);
-		
-		$this->taxonomy_meta = array();
-		foreach ( $taxonomy_meta as $name => $tax_meta_config ) {
-			$this->taxonomy_meta[$name] = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'], array( 'Description', ) );
-		}
-	}
-	
-	function taxonomy_category_radio_meta_box ($post, $box) {
-		echo "Needs to be written."; // See post_categories_meta_box in wordpress/admin/includes/meta_boxes.php, wp_terms_checklist in wordpress/admin/includes/template.php and Walker_Category_Checklist in wordpress/admin/includes/template.php for ideas on how to implement.
-	}
-	
-	// Sets up the custom post type and the taxonomies.
-	function initialize() {
-		register_post_type( $this->custom_post['name'], $this->custom_post['args'] );
-		foreach ( $this->taxonomies as $taxonomy ) {
-			if ( isset( $taxonomy['use_radio_button'] ) && $taxonomy['use_radio_button'] ) {
-				if ( $taxonomy['args']['hierarchical'] ) {
-					$taxonomy['args']['meta_box_cb'] = array( $this, 'taxonomy_category_radio_meta_box' );
-				}
-			}
-			
-			register_taxonomy( $taxonomy['name'], $taxonomy['post_type'], $taxonomy['args'] );
-		}
-	}
-	
-	// Changes the title text to identify it as the candidate name.
-	function update_title( $label )
-	{
-		global $post_type;
-	
-		if ( is_admin() && $this->custom_post['name'] == $post_type )
-		{
-			return $this->custom_post['args']['enter_title_here'];
-		}
-		
-		return $label;
-	}
-	
-	// Initialize the administrative interface.
-	function admin()
-	{
-	}
-	
-	// Identifies the columns to display in the administrative interface.
-	function define_columns( $columns ) {
-		if ( isset( $this->custom_post['args']['admin_column_names'] ) ) {
-			foreach ( $this->custom_post['args']['admin_column_names'] as $column_name => $title ) {
-				$columns[$column_name] = $title;
-			}
-		}
-		
-		if ( isset( $this->custom_post['args']['remove_admin_columns'] ) ) {
-			foreach ( $this->custom_post['args']['remove_admin_columns'] as $column_name ) {
-				unset( $columns[$column_name] );
-			}
-		}
-		
-		return $columns;
-	}
-	
-	// Identifies the sortable columns in the administrative interface.
-	function sort_columns( $columns ) {
-		foreach ( $this->taxonomies as $taxonomy ) {
-			$columns["taxonomy-{$taxonomy['name']}"] = "taxonomy-{$taxonomy['name']}";
-		}
-		
-		return $columns;
-	}
+		$this->custom_post = new ED_Custom_Post_Type( $this->post_type, $args, $define_hooks );
 
-	// Changes search query for taxonomies so that posts can be sorted by taxonomy.
-	function taxonomy_clauses( $clauses, $wp_query ) {
-		global $wpdb;
-		if ( isset( $wp_query->query['orderby'] ) ) {
-			foreach ( $this->taxonomies as $taxonomy ) {
-				if ( "taxonomy-{$taxonomy['name']}" == $wp_query->query['orderby'] ) {
-					$clauses['join'] .= <<<SQL
-LEFT OUTER JOIN {$wpdb->term_relationships} tr2 ON {$wpdb->posts}.ID=tr2.object_id
-LEFT OUTER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id
-LEFT OUTER JOIN {$wpdb->terms} t2 on tt2.term_id = t2.term_id
-SQL;
-
-					$clauses['where'] .= " AND (tt2.taxonomy = '" . $taxonomy['name'] . "' OR tt2.taxonomy IS NULL)";
-					$clauses['groupby'] = "tr2.object_id";
-					$clauses['orderby']  = "GROUP_CONCAT(t2.name ORDER BY name ASC) ";
-					$clauses['orderby'] .= ( 'ASC' == strtoupper( $wp_query->get( 'order' ) ) ) ? 'ASC' : 'DESC';
-				}
-			}
+		if ( $define_hooks ) {
+			add_filter( 'pre_get_posts', array( $this, 'set_main_query_parameters' ) );
 		}
-		
-		return $clauses;
+		add_image_size( 'candidate', 9999, 100, false );
+		add_image_size( 'map_thumb', 100, 9999, false );
+		add_image_size( 'map', 508, 9999, false );
+		add_image_size( 'party', 175, 175, false );
 	}
 	
-	// Removes the date filter from the admin column.
-	function remove_dates( $vars )
-	{
-		if ( $this->custom_post['name'] == get_post_type() ) {
-			return array();
-		}
-		
-		return $vars;
+	/**
+	 * Initializes the custom_post and taxonomies (Used during activation)
+	 *
+	 * @access public
+	 * @since 1.0
+	 *
+	 */
+	public function initialize() {
+		$this->custom_post->initialize();
 	}
 	
-	// Adds filters for the taxonomies.
-	function filter_lists() {
-		$screen = get_current_screen();
-		global $wp_query;
-		
-		if ( $this->custom_post['name'] == $screen->post_type ) {
-			foreach ( $this->taxonomies as $taxonomy ) {
-				$query = $taxonomy['args']['query_var'];
-				$name = $taxonomy['name'];
-				$selected = '';
-				if ( isset( $wp_query->query[$query] ) ) {
-					$term = get_term_by( 'slug', $wp_query->query[$query], $name );
-					if ( $term )
-					{
-						$selected = (int)$term->term_id;
-					}
-				}
-				
-				$args = array(
-					'show_option_all' => 'All ' . $taxonomy['args']['labels']['name'],
-					'taxonomy' => $name,
-					'name' => $query,
-					'orderby' => 'name',
-					'selected' => $selected,
-					'hierarchical' => true,
-					'depth' => 3,
-					'show_count' => false,
-					'hide_empty' => true,
-					'value_field' => 'slug'
-				);
-				
-				wp_dropdown_categories( $args );
-			}
-		}
-	}
-	
-	// Allow for default template files to be a part of the plugin.
-	function include_template_function( $template_path ) {
-		/*$template_file = '';
-		switch ( get_query_var( 'post_type' ) ) {
-			case $this->custom_post['name']:
-				if ( is_single() )
-				{
-					$template_file = 'single-' . $this->custom_post['name'] . '.php';
-				}
-				else
-				{
-					$template_file = 'archive-' . $this->custom_post['name'] . '.php';
-				}
-				break;
-			case '':
-				$taxonomy = get_query_var( 'taxonomy' );
-				foreach ( $this->taxonomies as $taxonomy_def )
-				{
-					if ( $taxonomy == $taxonomy_def['name'] ) {
-						$template_file = "single-$taxonomy.php";
-						break;
-					}
-				}
-				break;
-		}
-		
-		$plugin_path = plugin_dir_path( dirname( __FILE__ ) ) . "template/$template_file";
-		
-		if ( $template_file && is_file( $plugin_path ) ) {
-			if ( $theme_file = locate_template( array( $template_file ) ) ) {
-				$template_path = $theme_file;
-			} else {
-				$template_path = $plugin_path;
-			}
-		}
-		*/
-		return $template_path;
-	}
-	
-	function setup_admin_scripts() {
-		global $current_screen;
-		
-		if ( $current_screen->id == "edit-{$this->custom_post['name']}" && ( isset( $this->custom_post['args']['hide_quick_edit_fields'] ) || isset( $this->custom_post['args']['quick_edit_column_names'] ) ) ) {
-			wp_register_script( 'quick-edit-' . $this->custom_post['name'], plugin_dir_url( __FILE__ )  . 'js/quick-edit.js', array( 'jquery', 'inline-edit-post' ), '', true  );
-			$translation_array = array();
-			if ( isset( $this->custom_post['args']['hide_quick_edit_fields'] ) ) {
-				foreach ( $this->custom_post['args']['hide_quick_edit_fields'] as $column ) {
-					$translation_array[ucfirst($column)] = '';
-				}
-			}
-
-			wp_localize_script( 'quick-edit-' . $this->custom_post['name'], 'ed_remove_columns', $translation_array );
-			
-			$translation_array = array();
-			if ( isset( $this->custom_post['args']['quick_edit_column_names'] ) ) {
-				foreach ( $this->custom_post['args']['quick_edit_column_names'] as $column => $name ) {
-					$translation_array[ucfirst($column)	] = $name;
-				}
-			}
-			
-			wp_localize_script( 'quick-edit-' . $this->custom_post['name'], 'ed_rename_columns', $translation_array );
-			
-			wp_enqueue_script( 'quick-edit-' . $this->custom_post['name'] );
-		}
-	}
-	
-	function set_main_query_parameters( $query ) {
+	/**
+	 * Sets up the main query for displaying candidates by constituency, or by party'
+	 * 
+	 * @access public
+	 * @since 1.0
+	 *
+	 */
+	public function set_main_query_parameters( $query ) {
 		if( is_admin() || !$query->is_main_query() ) {
 			return;
 		}
 		
-		if ( is_tax( $this->taxonomies['party']['name'] ) ) {
-			$query->set( 'orderby', "taxonomy-{$this->taxonomies['constituency']['name']}" );
+		if ( is_tax( $this->taxonomies['party'] ) ) {
+			$query->set( 'orderby', "taxonomy-{$this->taxonomies['constituency']}" );
 			$query->set( 'order', 'ASC' );
 			$query->set( 'nopaging', 'true' );
-		} elseif ( is_tax( $this->taxonomies['constituency']['name'] ) ) {
+		} elseif ( is_tax( $this->taxonomies['constituency'] ) ) {
 			$query->set( 'orderby', 'rand' );
 			$query->set( 'nopaging', 'true' );
 		}
 	}
 	
-	function setup_public_scripts() {
-		wp_enqueue_style( 'ed_' . $this->custom_post['name'] . '_style', plugin_dir_url( __FILE__ ) . 'css/application.css' );
+	/**
+	 * Exports the candidates, parties and constituencies to a single xml file.
+	 *
+	 * @access public
+	 * @since 1.0
+	 * @param string $xml
+	 *
+	 */
+	public function export_xml( $xml ) {
 	}
 	
-	function define_hooks( )
-	{
-		add_action( 'admin_init', array( $this, 'admin' ) );
-		add_filter( "manage_edit-{$this->custom_post['name']}_columns", array( $this, 'define_columns' ) );
-		add_filter( 'manage_edit-' . $this->custom_post['name'] . '_sortable_columns', array(  $this, 'sort_columns' ) );
-		add_filter( 'posts_clauses', array(  $this, 'taxonomy_clauses' ), 10, 2 );
-	    add_action( 'restrict_manage_posts', array(  $this, 'filter_lists' ) );
-		add_action( 'admin_enqueue_scripts', array(  $this, 'setup_admin_scripts' ) );
-		if ( isset( $this->custom_post['args']['remove_admin_column_date_filter'] ) ) {
-			add_filter( 'months_dropdown_results', array(  $this, 'remove_dates' ) );
-		}
-		
-		if ( isset( $this->custom_post['args']['enter_title_here'] ) ) {
-			add_filter( 'enter_title_here',  array( $this, 'update_title' ) );
-		}
-
-		add_action( 'init',  array( $this, 'initialize' ) );
-		add_filter( 'template_include',  array( $this, 'include_template_function' ), 1 );
-		add_filter( 'wp_enqueue_scripts',  array( $this, 'setup_public_scripts' ) );
-		add_filter( 'pre_get_posts', array( $this, 'set_main_query_parameters' ) );
-	}
-		
-	function export_xml( $xml ) {
-	}
-	
-	function export_candidate_csv( $file ) {
+	/**
+	 * Exports the candidates to a csv file.
+	 *
+	 * @access protected
+	 * @since 1.0
+	 * @param file_handle $csv
+	 *
+	 */
+	protected function export_candidate_csv( $csv ) {
 		$post_fields = array(
 			'post_title' => 'name',
 			'post_name' => 'slug',
 		);
 		
 		$taxonomies = array( 
-			$this->taxonomies['party']['name'] => 'party',
-			$this->taxonomies['constituency']['name'] => 'constituency'
+			$this->taxonomies['party'] => 'party',
+			$this->taxonomies['constituency'] => 'constituency'
 		);
 		
-		Post_Export::export_post_csv( $file, $this->custom_post['name'], $this->post_meta, $post_fields, 'photo', $taxonomies );
+		Post_Export::export_post_csv( $csv, $this->post_type, $this->custom_post->post_meta, $post_fields, 'photo', $taxonomies );
 	}
 	
-	function export_party_csv( $file ) {
+	/**
+	 * Exports the parties to a csv file
+	 *
+	 * @access protected
+	 * @since 1.0
+	 * @param file_handle $csv
+	 *
+	 */
+	protected function export_party_csv( $csv ) {
 		$party_fields = array( 'name', 'slug', 'description' );
-		Post_Export::export_taxonomy_csv( $file, 'party', $this->taxonomies['party']['name'], $party_fields, $this->taxonomy_meta['party'] );
+		
+		Post_Export::export_taxonomy_csv( $csv, 'party', $this->taxonomies['party'], $party_fields, $this->custom_post->taxonomy_meta['party'] );
 	}
 	
-	function export_constituency_csv( $file ) {
+	/**
+	 * Exports the constituencies to a csv file.
+	 *
+	 * @access protected
+	 * @since 1.0
+	 * @param file_handle $csv
+	 *
+	 */
+	protected function export_constituency_csv( $csv ) {
 		$constituency_fields = array( 'name', 'slug', 'parent' );
-		Post_Export::export_taxonomy_csv( $file, 'constituency', $this->taxonomies['constituency']['name'], $constituency_fields, $this->taxonomy_meta['constituency'], 0 );
+		
+		Post_Export::export_taxonomy_csv( $csv, 'constituency', $this->taxonomies['constituency'], $constituency_fields, $this->custom_post->taxonomy_meta['constituency'], 0 );
 	}
 	
-	function export_csv ( $type ) {
+	/**
+	 * Exports the candidates, parites or constituencies to a csv file
+	 *
+	 * @access public
+	 * @since 1.0
+	 * @param string $type
+	 *
+	 */
+	public function export_csv ( $type ) {
 		$file_name = tempnam( 'tmp', 'csv' );
 		$file = fopen( $file_name, 'w' );
 		call_user_func( array( $this, "export_{$type}_csv" ), $file );
@@ -607,59 +463,81 @@ SQL;
 		return $file_name;
 	}
 	
-	function import_candidate_csv( $csv, $mode ) {
+	/**
+	 * Imports the candidates from a csv file
+	 *
+	 * @access protected 
+	 * @since 1.0
+	 * @param file_handle $csv
+	 * @param string $mode
+	 *
+	 */
+	protected function import_candidate_csv( $csv, $mode ) {
 		$post_fields = array(
 			'post_title' => 'name',
 			'post_name' => 'slug',
 		);
 		
 		$taxonomies = array( 
-			$this->taxonomies['party']['name'] => 'party',
-			$this->taxonomies['constituency']['name'] => 'constituency'
+			$this->taxonomies['party'] => 'party',
+			$this->taxonomies['constituency'] => 'constituency'
 		);
 		
-		return Post_import::import_post_csv( $csv, $mode, $this->custom_post['name'], $this->post_meta, $post_fields, 'photo', $taxonomies );
+		return Post_import::import_post_csv( $csv, $mode, $this->post_type, $this->custom_post->post_meta, $post_fields, 'photo', $taxonomies );
 	}
 	
-	function import_party_csv( $csv, $mode ) {
+	/**
+	 * Imports the parties from a CSV file.
+	 *
+	 * @access protected
+	 * @since 1.0
+	 * @param file_handle $csv
+	 * @param string $mode
+	 *
+	 */
+	protected function import_party_csv( $csv, $mode ) {
 		$party_fields = array( 'name', 'slug', 'description' );
-
-		return Post_Import::import_taxonomy_csv( $csv, $mode, 'party', $this->taxonomies['party']['name'], $party_fields, $this->taxonomy_meta['party'] );
+		
+		return Post_Import::import_taxonomy_csv( $csv, $mode, 'party', $this->taxonomies['party'], $party_fields, $this->custom_post->taxonomy_meta['party'] );
 	}
 	
-	function import_constituency_csv( $csv, $mode ) {
+	/**
+	 * Imports the constituencies from a CSV file.
+	 *
+	 * @access protected 
+	 * @since 1.0
+	 * @param file_handle $csv
+	 * @param string $mode
+	 *
+	 */
+	protected function import_constituency_csv( $csv, $mode ) {
 		$constituency_fields = array( 'name', 'slug' );
 		$parent_field = 'parent';
 		
-		return Post_Import::import_taxonomy_csv( $csv, $mode, 'constituency', $this->taxonomies['constituency']['name'], $constituency_fields, $this->taxonomy_meta['constituency'], $parent_field );
+		return Post_Import::import_taxonomy_csv( $csv, $mode, 'constituency', $this->taxonomies['constituency'], $constituency_fields, $this->custom_post->taxonomy_meta['constituency'], $parent_field );
 	}
 	
-	function import_csv( $type, $csv, $mode ) {
+	/**
+	 * Imports the candidates, constituencies or parties from a CSV file.
+	 *
+	 * @access public
+	 * @since 1.0
+	 * @param string $type
+	 * @param file_handle $csv
+	 * @param string $mode
+	 *
+	 */
+	public function import_csv( $type, $csv, $mode ) {
 		return call_user_func( array( $this, "import_{$type}_csv" ), $csv, $mode );
 	}
 	
-	function erase_data() {
-		$args = array(
-			'post_type' => $this->custom_post['name'],
-			'nopaging' => true,
-		);
-		$query = new WP_Query( $args );
-		while ( $query->have_posts() ) {
-			$query->the_post();
-			wp_delete_post( $query->post->ID, true );
-		}
-		
-		foreach ( $this->taxonomies as $taxonomy ) {
-			$taxonomies[] = $taxonomy['name'];
-			$args = array(
-				'hide_empty' => false,
-				'fields' => 'ids',
-				'get' => 'all',
-			);
-			$term_ids = get_terms( $taxonomy['name'], $args );
-			foreach ( $term_ids as $term_id ) {
-				wp_delete_term( $term_id, $taxonomy['name'] );
-			}
-		}
+	/**
+	 * Erases all candidates, parties and constituencies from the database.
+	 * @access public
+	 * @since 1.0
+	 *
+	 */
+	public function erase_data() {
+		$this->custom_post->erase_data();
 	}
 }

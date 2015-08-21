@@ -49,19 +49,20 @@ class Tax_Meta {
 	 * @param array $fields
 	 *
 	 */
-	public function __construct( $taxonomy, $fields, $hidden = array() ) {
+	public function __construct( $taxonomy, $fields, $hidden = array(), $define_hooks = true ) {
 		$this->fields = $fields;
 		$this->taxonomy = $taxonomy;
 		$this->prefix = "tm_{$taxonomy}_";
 		$this->hidden = $hidden;
 		
-		add_action( 'delete_term', array( $this, 'delete_meta'), 10, 3 );
-		add_action( "{$taxonomy}_add_form_fields", array( $this, 'add_form_fields' ) );
-		add_action( "{$taxonomy}_edit_form_fields", array( $this, 'edit_form_fields' ) );
-		add_action( "edited_$taxonomy", array( $this, 'save_meta' ) );
-		add_action( "created_$taxonomy", array( $this, 'save_meta' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-
+		if ( $define_hooks ) {
+			add_action( 'delete_term', array( $this, 'delete_meta'), 10, 3 );
+			add_action( "{$taxonomy}_add_form_fields", array( $this, 'add_form_fields' ) );
+			add_action( "{$taxonomy}_edit_form_fields", array( $this, 'edit_form_fields' ) );
+			add_action( "edited_$taxonomy", array( $this, 'save_meta' ) );
+			add_action( "created_$taxonomy", array( $this, 'save_meta' ) );
+			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+		}
 	}
 	
 	public function enqueue_scripts()

@@ -81,10 +81,8 @@ class Election_Data {
 		$this->define_public_hooks();
 
 		$this->candidate = new Election_Data_Candidate();
-		$this->candidate->define_hooks();
 		
-		$this->news_article = new Election_Data_News_Article();
-		$this->news_article->define_hooks();
+		$this->news_article = new Election_Data_News_Article( $this->candidate->post_type, $this->candidate->taxonomies['party']);
 	}
 
 	/**
@@ -251,8 +249,9 @@ class Election_Data {
 	}
 	
 	public static function import( $file_type, $file_data, $mode ) {
+		set_time_limit( 60 * 60 );
 		$candidate = new Election_Data_Candidate( false );
-		$news_article = new Election_Data_News_Article( false );
+		$news_article = new Election_Data_News_Article( $candidate->post_type, $candidate->taxonomies['party'], false );
 		
 		$file_name = $file_data['tmp_name'];
 
@@ -301,8 +300,9 @@ class Election_Data {
 	}
 	
 	public static function export( $file_type ) {
+		set_time_limit( 60 * 60 );
 		$candidate = new Election_Data_Candidate( false );
-		$news_article = new Election_Data_News_Article( false );
+		$news_article = new Election_Data_News_Article( $candidate->post_type, $candidate->taxonomies['party'], false );
 
 		switch ( $file_type ) {
 			case 'xml':

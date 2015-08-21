@@ -51,8 +51,7 @@ get_header(); ?>
 		<?php display_news_titles( $candidate_references ); ?>
 	</div>
 	<div class="one_column latest_news_small row_height_medium">
-		<a name="news"></a>
-		<h2>News that mentions the <?php echo $party['name']; ?> party leader</h2>
+		<h2 id="news">News that mentions the <?php echo $party['name']; ?> party leader</h2>
 		<p class="grey small">News articles are gathered from <a href="http://news.google.ca">Google News</a> by searching for the party name.</p>
 		<?php display_news_summaries( $leader_references, 'Party' ); ?>
 	</div>

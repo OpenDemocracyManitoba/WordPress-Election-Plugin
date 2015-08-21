@@ -83,6 +83,22 @@ function election_data_theme_widgets_init() {
 }
 add_action( 'widgets_init', 'election_data_theme_widgets_init' );
 
+function election_data_init() {
+	register_nav_menu('header-menu', __( 'Header Menu' ) );
+}
+add_action( 'init', 'election_data_init' );
+
+function election_data_nav_menu_items( $items, $args ) {
+	if ( $args->theme_location == 'header-menu' ) {
+		error_log( print_r( $items, true ) );
+		error_log( print_r( $args, true ) );
+	}
+	
+	return $items;
+}
+add_filter( 'wp_nav_menu_items' , 'election_data_nav_menu_items', 10, 2 );
+
+
 $candidate_name = 'ed_candidates';
 $party_name = "{$candidate_name}_party";
 $constituency_name = "{$candidate_name}_constituency";
@@ -93,24 +109,17 @@ $source_name = "{$news_article_name}_source";
 function get_constituency( $constituency_id, $get_extra_data = true ) {
 	global $constituency_name;
 	$all_terms = get_terms( $constituency_name, array( 'include' => $constituency_id, 'hide_empty' => false ) );
-	$constituency_terms = $all_terms[0];
+	$constituency_term = $all_terms[0];
 	$results = array(
-		'id' => $constituency_terms->term_id,
-		'name' => $constituency_terms->name,
-		'url' => get_term_link( $constituency_id, $constituency_name ),
-		'reference' => get_post_meta( $constituency_terms->term_id, 'reference' ),
+		'id' => $constituency_term->term_id,
+		'name' => $constituency_term->name,
+		'url' => get_term_link( $constituency_term, $constituency_name ),
+		'reference' => get_post_meta( $constituency_term->term_id, 'reference' ),
 	);
 	if ( $get_extra_data ) {
-		$results['details'] = get_tax_meta( $constituency_terms->term_id, 'details' );
-		$map_image = get_tax_meta( $constituency_terms->term_id, 'map' );
-		if ( $map_image )
-		{
-			$results['map'] = $map_image['url'];
-		}
-		else
-		{
-			$results['map'] = '';
-		}
+		$results['details'] = get_tax_meta( $constituency_term->term_id, 'details' );
+		$map_image = get_tax_meta( $constituency_term->term_id, 'map' );
+		$results['map_id'] = $map_image ? $map_image['id'] : '';
 		
 		$child_terms = get_terms( $constituency_name, array( 'parent' =>$constituency_id, 'hide_empty' => false ) );
 		$results['children'] = array();
@@ -130,8 +139,8 @@ function get_constituency_from_candidate( $candidate_id ) {
 	global $constituency_name;
 	$all_terms = get_the_terms( $candidate_id, $constituency_name );
 	if ( isset( $all_terms[0] ) ) {
-		$constituency_terms = $all_terms[0];
-		return get_constituency( $constituency_terms->term_id, false );
+		$constituency_term = $all_terms[0];
+		return get_constituency( $constituency_term->term_id, false );
 	} else {
 		return  array(
 			'id' => 0,
@@ -142,26 +151,51 @@ function get_constituency_from_candidate( $candidate_id ) {
 	}
 }
 
+function get_root_constituencies() {
+	global $constituency_name;
+	$args = array(
+		'orderby' => 'name',
+		'order' => 'ASC',
+		'hide_empty' => 'false',
+		'fields' => 'ids',
+		'parent' => 0,
+	);
+	
+	$terms = get_terms( $constituency_name , $args );
+	return $terms;
+}
+
+function get_parties_random() {
+	global $party_name;
+	$args = array(
+		'orderby' => 'id',
+		'order' => 'ASC',
+		'hide_empty' => 'false',
+		'fields' => 'ids',
+	);
+	
+	$terms = get_terms( $party_name , $args );
+	shuffle( $terms );
+	return $terms;
+}	
+
 function get_party( $party_id, $get_extra_data = true ) {
 	global $party_name;
 	$all_terms = get_terms( $party_name, array( 'include' => $party_id, 'hide_empty' => false ) );
-	$party_terms = $all_terms[0];
+	$party_term = $all_terms[0];
 	
 	$results = array(
-		'name' => $party_terms->name,
+		'name' => $party_term->name,
 		'colour' => get_tax_meta( $party_id, 'colour' ),
-		'url' => get_term_link( $party_id, $party_name ),
-		'long_title' => $party_terms->description,
+		'url' => get_term_link( $party_term, $party_name ),
+		'long_title' => $party_term->description,
 		'reference_id' => get_tax_meta( $party_id, 'reference' ),
 	);
 		
 	if ( $get_extra_data ) {
 		$party_logo = get_tax_meta( $party_id, 'logo' );
-		if ( $party_logo && $party_logo['url'] ) {
-			$results['logo_url'] = $party_logo['url'];
-		} else {
-			$results['logo_url'] = plugins_url( 'images/missing_party.jpg', __FILE__ );
-		}
+		$results['logo_id'] = $party_logo ? $party_logo['id'] : '';//Election_Data_Options::get_option( 'missing_party' );
+
 		$results['website'] = get_tax_meta( $party_id, 'website' );
 		$results['phone'] = get_tax_meta( $party_id, 'phone' );
 		$results['address'] = get_tax_meta( $party_id, 'address' );
@@ -201,8 +235,8 @@ function get_party_from_candidate( $candidate_id ) {
 	global $party_name;
 	$all_terms = get_the_terms( $candidate_id, $party_name );
 	if ( isset( $all_terms[0] ) ) {
-		$party_terms = $all_terms[0];
-		$party_id = $party_terms->term_id;
+		$party_term = $all_terms[0];
+		$party_id = $party_term->term_id;
 		return get_party( $party_id, false );
 	} else {
 		return array(
@@ -217,12 +251,7 @@ function get_party_from_candidate( $candidate_id ) {
 
 function get_candidate( $candidate_id ) {
 	$image_id = get_post_thumbnail_id( $candidate_id );
-	if ( $image_id ) {
-		$image_url = wp_get_attachment_url( $image_id );
-	} else {
-		$image_url = plugins_url( 'images/missing_candidate.jpg', __FILE__ );
-	}
-
+	$image_id = $image_id ? $image_id : ''; //Election_Data_Options::get_option( 'missing_candidate' );
 	
 	$icon_data = array();
 	foreach ( array('email', 'facebook', 'youtube', 'twitter' ) as $icon_type ) {
@@ -252,7 +281,7 @@ function get_candidate( $candidate_id ) {
 	}
 
 	return array(
-		'image_url' => $image_url,
+		'image_id' => $image_id,
 		'icon_data' => $icon_data,
 		'reference_id' => get_post_meta( $candidate_id, 'reference', true ),
 		'name' => get_the_title( $candidate_id ),
@@ -268,18 +297,11 @@ function get_candidate( $candidate_id ) {
 	);
 }
 
-function get_news( $reference_id, $page = 0, $articles_per_page = 20 ) {
+function get_news( $reference_id = null, $page = 0, $articles_per_page = 20 ) {
 	global $news_article_name, $reference_name;
 	$args = array(
 		'post_type' => $news_article_name,
 		'post_status' => 'publish',
-		'tax_query' => array(
-			array(
-				'taxonomy' => $reference_name,
-				'field' => 'term_id',
-				'terms' => $reference_id,
-			),
-		),
 		'meta_query' => array(
 			array(
 				'key' => 'moderation',
@@ -291,6 +313,17 @@ function get_news( $reference_id, $page = 0, $articles_per_page = 20 ) {
 		'posts_per_page' => $articles_per_page,
 	);
 	
+	if ( ! empty( $reference_id ) ) {
+		$args['tax_query'] = array(
+			array(
+				'taxonomy' => $reference_name,
+				'field' => 'term_id',
+				'terms' => $reference_id,
+			),
+		);
+	}
+
+	
 	$news_query = new WP_Query( $args ); 
 	return array(
 		'count' => $news_query->found_posts,
@@ -300,8 +333,8 @@ function get_news( $reference_id, $page = 0, $articles_per_page = 20 ) {
 }
 
 
-function display_news_titles ( $reference_ids ) {
-	global $source_name, $reference_name, $party_name, $candidate_name;
+function display_news_titles ( $reference_ids = null, $show_more = false ) {
+	global $source_name, $reference_name, $party_name, $candidate_name, $news_article_name;
 	$news = get_news( $reference_ids );
 	$articles = $news['articles'];
 	$last_date = '';
@@ -321,16 +354,17 @@ function display_news_titles ( $reference_ids ) {
 			$references = wp_get_post_terms( $article_id, $reference_name );
 			$mentions = array();
 			foreach ( $references as $reference ) :
-				if ( ! in_array( $reference->term_id, $reference_ids ) ) {
+				if ( $reference_ids && ! in_array( $reference->term_id, $reference_ids ) ) {
 					continue;
 				}
 				$reference_id = get_tax_meta( $reference->term_id, 'reference_post_id' );
-				switch ( get_tax_meta( $reference->parent, 'reference_post_id' ) ) :
-					case $party_name:
-						$url = get_term_link( $reference_id, $party_name );
+				$parent = get_term( $reference->parent, $reference_name );
+				switch ( $parent->name ) :
+					case 'Party':
+						$url = get_term_link( get_term( $reference_id, $reference ), $party_name );
 						break;
-					case $candidate_name:
-						$url = get_permalink( $reference_id );
+					case 'Candidate':
+						$url = get_permalink( get_post( $reference_id ) );
 						break;
 					default:
 						$url = '';
@@ -346,6 +380,9 @@ function display_news_titles ( $reference_ids ) {
 			</li>
 		<?php endwhile; ?>
 		</ul>
+			<?php if ( $show_more ) : ?>
+			<p class="more"><a href="<?php echo get_post_type_archive_link( $news_article_name ); ?>">More News...</a></p>
+		<?php endif; ?>
 	<?php else : ?>
 		<em>No articles found yet.</em>
 	<?php endif;
@@ -425,7 +462,7 @@ function display_party( $party ) {
 	?>
 	<div class="party">
 		<div class="image" style="border-bottom: 8px solid <?php echo esc_attr( $party['colour'] ); ?>">
-			<img alt="<?php echo $party['name']; ?> Logo" src="<?php echo esc_attr( $party['logo_url'] ); ?>"/>
+			<?php echo wp_get_attachment_image($party['logo_id'], 'party', false, array( 'alt' => "{$party['name']} Logo" ) ); ?>
 		</div>
 		<div class="name" >
 			<?php echo $party['name']; ?>
@@ -464,7 +501,7 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 	
 	?><div class="politician show_constituency">
 		<div class="image" style="border-bottom: 8px solid <?php echo esc_attr( $party['colour'] ); ?>;">
-			<img alt="<?php echo $candidate['name'] ?>" src="<?php echo esc_attr( $candidate['image_url'] ); ?>" />
+			<?php echo wp_get_attachment_image($candidate['image_id'], 'candidate', false, array( 'alt' => $candidate['name'] ) ); ?>
 			<?php if ( $candidate['party_leader'] ) :?>
 			<div class="leader">party leader</div>
 			<?php endif; ?>
@@ -495,7 +532,7 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 				<?php endif;
 			endforeach; ?>
 		</div>
-		<div class="news <?php echo $display_news ? '' : 'hidden'; ?>">News: <a href="<?php echo $candidate['url']; ?>"><?php echo esc_html( $news['count'] ); ?> Related Articles</a></div>
+		<div class="news <?php echo $display_news ? '' : 'hidden'; ?>">News: <a href="<?php echo "{$candidate['url']}#news"; ?>"><?php echo esc_html( $news['count'] ); ?> Related Articles</a></div>
 		<div class="candidate-party <?php echo $display_party ? '' : 'hidden' ?>">Political Party: <a href="<?php echo $party['url']; ?>"><?php echo esc_html( $party['name'] ); ?></a></div>
 		<div class="phone <?php echo $candidate['phone'] ? '' : 'hidden' ?>">Phone: <?php echo esc_html( $candidate['phone'] ); ?></div>
 	</div>

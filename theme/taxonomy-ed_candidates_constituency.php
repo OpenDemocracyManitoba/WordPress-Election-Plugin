@@ -5,7 +5,7 @@ $constituency = get_constituency( $constituency_id );
 
 get_header();?>
 <?php if ( $constituency['children'] ) : ?> 
-	<h2>Select Your <?php echo $constituency['name']; ?> Constituencies</h2>
+	<h2>Select Your <?php echo $constituency['name']; ?> Constituency</h2>
 	<p class="small grey hidden_block_when_mobile">Find by name or click the map.</p>
 	<div class='flow_it'>
 		<?php if ( $constituency['map'] ) : ?>
@@ -50,7 +50,7 @@ get_header();?>
 		<?php else : ?>
 			<div class="three_columns latest_news_small">
 		<?php endif; ?>
-			<h2>Latest Candidate News</h2>
+			<h2 id="news">Latest Candidate News</h2>
 			<p class="grey small">Recent articles that mention candidates from this race.</p>
 			<br>
 			<?php display_news_titles( $candidate_references ); ?>

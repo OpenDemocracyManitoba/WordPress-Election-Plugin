@@ -1,5 +1,7 @@
 <?php
 /**
+ * Template Name: Search Page
+ *
  * The template for displaying all pages.
  *
  * This is the template that displays all pages by default.
@@ -15,15 +17,9 @@ get_header(); ?>
  
         <div id="primary" class="content-area">
             <div id="content" class="site-content" role="main">
- 
-                <?php while ( have_posts() ) : the_post(); ?>
- 
-                    <?php get_template_part( 'content', 'page' ); ?>
- 
-                    <?php comments_template( '', true ); ?>
- 
-                <?php endwhile; // end of the loop. ?>
- 
+				
+				<?php get_search_form(); ?>
+			
             </div><!-- #content .site-content -->
         </div><!-- #primary .content-area -->
  

@@ -21,8 +21,7 @@ get_header(); ?>
 		<?php display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'constituency', 'party' ), 'constituency' ); ?>
 	</div>
 	<div class="three_columns">
-		<a name="news"></a>
-		<h2>News that mentions <?php echo $candidate['name']; ?></h2>
+		<h2 id="news">News that mentions <?php echo $candidate['name']; ?></h2>
 		<p class="news-article-notice">Articles are gathered from <a href="http://news.google.ca">Google News</a> by searching for the candidate's full name.</p>
 		<?php display_news_summaries( $candidate['reference_id'], 'Candidate' ); ?>
 	</div>
