@@ -17,7 +17,7 @@ get_header(); ?>
                     <h1 class="page-title"><?php printf( __( 'Search Results for: %s', 'election_data_theme' ), '<span>' . get_search_query() . '</span>' ); ?></h1>
                 </header><!-- .page-header -->
  
-                <?php election_data_theme_content_nav( 'nav-above' ); ?>
+                <?php //election_data_theme_content_nav( 'nav-above' ); ?>
  
                 <?php /* Start the Loop */ ?>
                 <?php while ( have_posts() ) : the_post(); ?>
@@ -26,7 +26,7 @@ get_header(); ?>
  
                 <?php endwhile; ?>
  
-                <?php election_data_theme_content_nav( 'nav-below' ); ?>
+                <?php //election_data_theme_content_nav( 'nav-below' ); ?>
  
             <?php else : ?>
  
@@ -36,6 +36,5 @@ get_header(); ?>
  
             </div><!-- #content .site-content -->
         </section><!-- #primary .content-area -->
- 
-<?php get_sidebar(); ?>
+
 <?php get_footer(); ?>

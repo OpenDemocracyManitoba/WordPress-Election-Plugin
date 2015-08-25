@@ -349,7 +349,7 @@ class Election_Data_Candidate {
 		}
 		add_image_size( 'candidate', 9999, 100, false );
 		add_image_size( 'map_thumb', 100, 9999, false );
-		add_image_size( 'map', 508, 9999, false );
+		add_image_size( 'map', 598, 9999, false );
 		add_image_size( 'party', 175, 175, false );
 	}
 	
@@ -381,6 +381,9 @@ class Election_Data_Candidate {
 			$query->set( 'order', 'ASC' );
 			$query->set( 'nopaging', 'true' );
 		} elseif ( is_tax( $this->taxonomies['constituency'] ) ) {
+			$query->set( 'orderby', 'rand' );
+			$query->set( 'nopaging', 'true' );
+		} elseif ( is_post_type_archive( $this->post_type ) ) {
 			$query->set( 'orderby', 'rand' );
 			$query->set( 'nopaging', 'true' );
 		}

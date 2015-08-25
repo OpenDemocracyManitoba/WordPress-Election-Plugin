@@ -12,7 +12,7 @@ get_header();
 ?>
 <div id="primary">
     <div id="content" role="main">
-		<?php display_all_candidates( $wp_query ); ?>
+		<?php news_titles( $wp_query, 'News Article' ); ?>
 	</div>
 </div>
 <?php get_footer(); ?>

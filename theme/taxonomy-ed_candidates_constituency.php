@@ -8,9 +8,9 @@ get_header();?>
 	<h2>Select Your <?php echo $constituency['name']; ?> Constituency</h2>
 	<p class="small grey hidden_block_when_mobile">Find by name or click the map.</p>
 	<div class='flow_it'>
-		<?php if ( $constituency['map'] ) : ?>
+		<?php if ( $constituency['map_id'] ) : ?>
 			<div class='two_columns hidden_block_when_mobile'>
-				<img alt='<?php echo $constituency['name']; ?>' class='highmap' src='<?php echo $constituency['map']; ?>' usemap='#constituency_map' />
+				<?php echo wp_get_attachment_image($constituency['map_id'], 'map', false, array( 'alt' => $constituency['name'], 'usemap' => '#constituency_map', 'class' => 'highmap'	) ); ?>
 				<map id="constituency_map" name="constituency_map">
 					<?php foreach ( $constituency['children'] as $name => $child ) :?>
 						<?php if ( $child['coordinates'] ) : ?>

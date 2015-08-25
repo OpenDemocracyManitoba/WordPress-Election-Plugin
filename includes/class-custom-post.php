@@ -181,9 +181,12 @@ class ED_Custom_Post_Type {
 		$this->hidden_admin_filters = empty( $args['hidden_admin_filters'] ) ? array() : $args['hidden_admin_filters'];
 		$this->taxonomy_admin_columns = array();
 		$this->taxonomy_filters = array();
-		foreach ( $args['taxonomy_filters'] as $taxonomy ) {
-			$this->taxonomy_filters[$taxonomy] = '';
+		if ( $args['taxonomy_filters'] ) {
+			foreach ( $args['taxonomy_filters'] as $taxonomy ) {
+				$this->taxonomy_filters[$taxonomy] = '';
+			}
 		}
+		$this->meta_filters = empty( $args['meta_filters'] ) ? array() : $args['meta_filters'];
 		
 		$this->sortable_taxonomies = empty( $args['sortable_taxonomies'] ) ? array() : $args['sortable_taxonomies'];
 		
@@ -192,7 +195,8 @@ class ED_Custom_Post_Type {
 			$this->post_meta = new Post_Meta( 
 				$custom_post_meta['meta_box'],
 				$custom_post_meta['fields'],
-				$custom_post_meta['admin_columns']
+				isset( $custom_post_meta['admin_columns'] ) ? $custom_post_meta['admin_columns'] : array(),
+				isset( $custom_post_meta['filters'] ) ? $custom_post_meta['filters'] : array()
 			);
 		} else {
 			$this->post_meta = null;
@@ -414,7 +418,7 @@ SQL;
 		
 		if ( $current_screen->id == "edit-{$this->post_type}" && ( ! empty( $this->hidden_admin_fields ) || ! empty( $this->admin_column_names ) ) ) {
 			$script_name = "quick-edit-{$this->post_type}";
-			wp_register_script( $script_name, plugin_dir_url( __FILE__ )  . 'js/quick-edit.js', array( 'jquery', 'inline-edit-post' ), '', true  );
+			wp_register_script( $script_name, plugin_dir_url( __FILE__ )  . 'js/quick-edit.js', array( 'jquery', 'inline-edit-post' ), '', true );
 			$translation_array = array();
 			foreach ( $this->hidden_admin_fields as $column ) {
 				$translation_array[ucfirst($column)] = '';
@@ -428,8 +432,23 @@ SQL;
 			}
 			
 			wp_localize_script( $script_name, 'ed_rename_columns', $translation_array );
-			
+		
 			wp_enqueue_script( $script_name );
+		}
+					
+		foreach ( $this->taxonomy_args as $taxonomy_name => $taxonomy_args ) {
+			if ( $current_screen->id == "edit-$taxonomy_name" && $taxonomy_args['hierarchical'] == true ) {
+				$script_name = "bulk-$taxonomy_name";
+				wp_register_script( $script_name, plugin_dir_url( __FILE__ ) . 'js/tax-bulk.js', array( 'jquery' ), '', true );
+				
+				$translation_array = array(
+					'set_parent' => __( 'Set Parent' ),
+				);
+				
+				wp_localize_script( $script_name, 'ed_tax_bulk_local', $translation_array );
+				
+				wp_enqueue_script( $script_name );
+			}
 		}
 	}
 	
@@ -442,7 +461,7 @@ SQL;
 	 * @param array $root_names
 	 *
 	 */
-	function get_or_create_root_taxonomy_terms( $taxonomy_name, $root_names ) {
+	public function get_or_create_root_taxonomy_terms( $taxonomy_name, $root_names ) {
 		$args = array(
 			'fields' => 'all',
 			'hide_empty' => false,
@@ -465,8 +484,91 @@ SQL;
 		return $root_ids;
 	}
 	
+	public function load_edit_tags() {
+		$taxonomy_name = isset( $_REQUEST['taxonomy'] ) ? $_REQUEST['taxonomy'] : '';
+		if ( isset( $this->taxonomy_args[$taxonomy_name] ) ) {
+			$taxonomy = get_taxonomy( $taxonomy_name );
+			if ( ! $taxonomy || ! current_user_can( $taxonomy->cap->manage_terms ) ) {
+				return;
+			}
+
+			add_action( 'admin_footer', array( $this, 'create_parent_select' ) );
+			
+			if ( empty( $_REQUEST['action' ]) || empty( $_REQUEST['delete_tags'] ) || $_REQUEST['action'] != 'bulk_set_parent' ) {
+				return;
+			}
+
+			$term_ids = $_REQUEST['delete_tags'];
+			$referer = wp_get_referer();
+			
+			if ( $referer && false != strpos( $referer, 'edit-tags.php') ) {
+				$location = $referer;
+			} else {
+				$location = add_query_arg( 'taxonomy', $taxonomy_name, 'edit-tags.php' );
+			}
+			
+			if ( empty( $_REQUEST['parent'] ) ) {
+				$result = false;
+			} else {
+				$parent_id = $_REQUEST['parent'];
+
+				foreach ( $term_ids as $term_id ) {
+					if ( $term_id == $parent_id ) {
+						continue;
+					}
+
+					$ret = wp_update_term( $term_id, $taxonomy_name, array( 'parent' => $parent_id ) );
+
+					if ( is_wp_error( $ret ) ) {
+						$result = false;
+						break;
+					}
+				}
+				$result = true;
+			}
+
+			wp_redirect( add_query_arg( 'ed_message', $result ? 'term-updated' : 'term-error', $location ) );
+			die();
+			error_log( print_r( $_REQUEST, true ) );
+		}
+	}
+	
+	public function create_parent_select() {
+		global $taxonomy;
+		
+		echo '<div id="ed_input_set_parent" style="display:none">';
+			wp_dropdown_categories( array(
+				'hide_empty' => false,
+				'hide_if_empty' => false,
+				'name' => 'parent',
+				'orderby' => 'name',
+				'taxonomy' => $taxonomy,
+				'hierarchical' => true,
+				'show_option_none' => __( 'None' )
+			) );
+		echo '</div>';
+	}
+	
+	public function admin_notice() {
+		if ( !isset( $_GET['ed_message'] ) )
+			return;
+		$taxonomy_name = isset( $_REQUEST['taxonomy'] ) ? $_REQUEST['taxonomy'] : '';
+		if ( ! isset( $this->taxonomy_args[$taxonomy_name] ) && get_post_type() != $this->post_type ) {
+			return;
+		}
+		
+		switch ( $_GET['ed_message'] ) {
+		case  'term-updated':
+			echo '<div id="message" class="updated"><p>' . __( 'Terms updated.', 'term-management-tools' ) . '</p></div>';
+			break;
+
+		case 'term-error':
+			echo '<div id="message" class="error"><p>' . __( 'Terms not updated.', 'term-management-tools' ) . '</p></div>';
+			break;
+	}}
+	
 	/**
-	 * Sets upp all of the filter and action hooks required by the custom post type.
+	 * Sets up all of the filter and action hooks required by the custom post type.
 	 *
 	 * @since 1.0
 	 * @access public
@@ -486,8 +588,10 @@ SQL;
 		if ( isset( $this->admin_field_names['enter_title_here'] ) || isset( $this->admin_field_names['title'] ) ) {
 			add_filter( 'enter_title_here', array( $this, 'update_title' ) );
 		}
-
+		
+		add_action( 'load-edit-tags.php', array( $this, 'load_edit_tags' ) );
 		add_action( 'init',  array( $this, 'initialize' ) );
+		add_action( 'admin_notices', array( $this, 'admin_notice' ) );
 	}
 	
 	/**

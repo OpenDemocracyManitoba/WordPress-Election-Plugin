@@ -30,6 +30,7 @@ class Election_Data_Activator {
 	 * @since    1.0.0
 	 */
 	public static function activate() {
+		
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-candidate.php';
 		
 		$candidate = new Election_Data_Candidate( false );
@@ -44,19 +45,96 @@ class Election_Data_Activator {
 		
 		$news_articles->setup_cron();
 		
-		//Election_Data_Options::update_option(
-		
-		switch_theme('ElectionData' );
-
 		$search_page = self::get_or_add_search_page();
 	
-		self::register_navigation( $news_articles, $search_page->ID );
+		$menu_id = self::register_navigation( $news_articles, $search_page->ID );
+		
+		Election_Data_Option::set_option( 'menu-id', $menu_id );
+		
+		if ( ! self::setup_theme() ) {
+			$warnings = Election_Data_Option::get_option( 'warnings', array() );
+			$warnings[] = __ ( 'Unable to set up the Election Data Theme that is required for the plugin to work properly. Please copy the theme folder in the Election Data plugin to the wordpress theme folder and activate the Election Data Theme.' );
+			Election_Data_Option::set_option ( 'warnings', $warnings);
+		}
+	}
+	
+	private static function recurse_copy($src,$dst) { 
+		$dir = opendir($src); 
+		@mkdir($dst); 
+		while(false !== ( $file = readdir($dir)) ) { 
+			if (( $file != '.' ) && ( $file != '..' )) { 
+				if ( is_dir($src . '/' . $file) ) { 
+					recurse_copy($src . '/' . $file,$dst . '/' . $file); 
+				} 
+				else { 
+					copy($src . '/' . $file,$dst . '/' . $file); 
+				} 
+			} 
+		} 
+		closedir($dir); 
+	}
+	
+	public static function same_themes( $a, $b ) {
+		$same = $a.exists() && $b.exists();
+		if ( $same ) {
+			$headers = array( 'Version', 'Author' );
+			foreach ( $headers as $header ) {
+				$same &= $new_theme.get( $header ) == $original_theme.get( $header );
+			}
+		}
+		return $same;
+	}
+	
+	public static function copy_theme( $dest_name ) {
+		$src_theme = wp_get_theme( 'theme', get_plugin_dir( __FILE__ ) . '../theme' );
+		$dest_theme = wp_get_theme( $dest_name );
+		
+		if ( $dest_theme.exists() ) {
+			if ( same_themes( $src_theme, $dest_theme ) ) {
+				return '';
+			}
+			
+			$dest = tmpnam( get_theme_root(), 'ElectionData' );
+			unlink( $dest );
+			if ( dirname( $dest ) != get_theme_root() ) {
+				return false;
+			}
+		} else {
+			$dest = get_theme_root() . '/ElectionData';
+		}
+		
+		self::recurse_copy( $plugin_dir_path( '../theme' ), $dest );
+		$dest_theme = wp_get_theme( basename( $dest ) );
+		if ( $dest_theme.exists() ) {
+			return basename( $dest );
+		}
+		
+		return false;
+	}
+	
+	public static function setup_theme() {
+		$current_theme = get_stylesheet();
+		Election_Data_Option::set_option( 'previous_theme', $current_theme );
+
+		$theme_name = self::copy_theme( 'ElectionData' );
+		if ( $theme_name === false ) {
+			return false;
+		}
+		
+		Election_Data_Option::set_option( 'theme_name', $theme_name );
+		
+		if ( ! $theme_name ) {
+			$theme_name = 'ElectionData';
+		}
+		
+		switch_theme( $theme_name );
+		return true;
 	}
 	
 	public static function get_or_add_search_page() {
 		$search_pages = get_pages( array( 
 			'meta_key' => '_wp_page_template',
-			'meta_value' => 'searchpage.pgp',
+			'meta_value' => 'searchpage.php',
 		) );
 		
 		if ( count( $search_pages ) > 0 ) {
@@ -75,8 +153,8 @@ class Election_Data_Activator {
 	
 	public static function register_navigation( $news_articles, $seach_page_id ) {
 		$menu_name = 'Election Data Navigation Menu';
-		$menu_location = 'header-menu';
-		if ( ! wp_get_nav_menu_object( $menu_name ) ) {
+		$menu_id = wp_get_nav_menu_object( $menu_name );
+		if ( ! $menu_id ) {
 			$menu_id = wp_create_nav_menu( $menu_name );
 			error_log( "menu_id: $menu_id" );
 			wp_update_nav_menu_item( $menu_id, 0, array(
@@ -109,6 +187,22 @@ class Election_Data_Activator {
 				'menu-item-status' => 'publish',
 			) );
 		}
+		
+		return $menu_id;
+	}
+	
+	public static function display_activation_warnings() {
+		$warnings = Election_Data_Option::get_option( 'warnings' );
+		
+		if ( is_admin() && $warnings ) : ?>
+			<div class="activation_warnings" >
+				<?php foreach ( $warnings as $warning ) : ?>
+					<div>
+						<p><?php echo $warning ?></p>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		<?php endif;
 	}
 	
 }

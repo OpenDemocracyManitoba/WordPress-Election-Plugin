@@ -152,7 +152,7 @@ class Election_Data_News_Article {
 						'imported' => true,
 					),
 					'moderation' => array(
-						'label' => __( 'Moderation' ),
+						'label' => __( 'Moderated' ),
 						'id' => 'moderation',
 						'desc' => __( 'Whether the article is to be displaed in the news sections ore not.' ),
 						'type' => 'pulldown',
@@ -174,6 +174,14 @@ class Election_Data_News_Article {
 					),
 				),
 				'admin_columns' => array( 'url', 'moderation' ),
+				'filters' => array( 
+					'moderation' => array(
+						'0' => 'All Moderations',
+						'New' => 'New',
+						'Approved' => 'Approved',
+						'Rejected' => 'Rejected',
+					),
+				),
 			),
 			'taxonomy_args' => array(
 				$this->taxonomies['reference'] => array(
@@ -452,10 +460,17 @@ class Election_Data_News_Article {
 	 * @since 1.0
 	 *
 	 */
-	protected function get_articles_by_url() {
+	protected function get_articles_by_url( $url ) {
 		$args = array( 
 			'post_type' => $this->post_type,
 			'post_status' => array ( 'publish',),
+			'meta_query' => array(
+				array(
+					'key' => 'url',
+					'value' => $url,
+					'compare' => '=',
+				),
+			),
 			'nopaging' => true,
 		);
 		
@@ -463,9 +478,7 @@ class Election_Data_News_Article {
 		$articles = array();
 		while ( $query->have_posts() ) {
 			$query->the_post();
-			$id = get_the_ID();
-			$url = get_post_meta( $id, 'url', true );
-			$articles[$url] = $id;
+			$articles[] = $query->post->ID;
 		}
 		return $articles;
 	}
@@ -492,17 +505,19 @@ class Election_Data_News_Article {
 	public function update_news_articles( $mode = 'non-ajax' ) {
 		$references = $this->update_references();
 		$sources_data = $this->get_sources();
-		$auto_publish_sources = $sources_data['children']['Automatically Publish'];
+		$auto_publish_sources = $sources_data['children']['Automatically Approve'];
 		$auto_reject_sources = $sources_data['children']['Automatically Reject'];
-		foreach ( $source_data as $source ) {
+		$sources = array();
+		foreach ( $sources_data['children'] as $source ) {
 			$sources += $source;
 		}
 		$source_parents = $sources_data['parents'];
-		$articles_by_url = $this->get_articles();
 		
-		foreach ( $references as $reference_type => $reference_by_name ) {
-			foreach ( $references_by_name as $reference_name => $reference_id )
-			{
+		error_log( "Begin Scraping Articles" );
+		foreach ( $references as $reference_type => $references_by_name ) {
+			error_log( " - Begin Scraping for $reference_type" );
+			foreach ( $references_by_name as $reference_name => $reference_id ) {
+				error_log( " - - Begin Scraping for $reference_name" );
 				$mentions = $this->get_individual_news_articles( $reference_name );
 				$mentions += $this->get_individual_news_articles( $reference_name, Election_Data_Option::get_option( 'location' ) );
 				foreach ( $mentions as $mention ) {
@@ -521,8 +536,9 @@ class Election_Data_News_Article {
 						$mention['moderation'] = 'new';
 					}
 									
-					if ( isset( $articles_by_url[$mention['url']] ) ) {
-						$article_id = $articles_by_url[$mention['url']];
+					$existing_articles = $this->get_articles_by_url( $mention['url'] );
+					if ( $existing_articles ) {
+						$article_id = $existing_articles[0];
 						$post = get_post( $article_id );
 						if ( $post->post_title != $mention['title'] ) {
 							$args = array ( 'ID' => $post->ID, 'post_title' => $mention['title'] );
@@ -539,7 +555,7 @@ class Election_Data_News_Article {
 					else {
 						$post = array(
 							'post_title' => $mention['title'],
-							'post_status' => $mention['published'],
+							'post_status' => 'publish',
 							'post_type' => $this->post_type,
 							'post_date' => $mention['publication_date']
 						);
@@ -558,8 +574,14 @@ class Election_Data_News_Article {
 		
 		$args = array( 
 			'post_type' => $this->post_type,
-			'post_status' => array ( 'pending',),
 			'nopaging' => true,
+			'meta_query' => array(
+				array(
+					'key' => 'moderation',
+					'value' => 'new',
+					'compare' => '=',
+				),
+			),
 		);
 		
 		$query = new WP_Query( $args );
@@ -619,7 +641,7 @@ class Election_Data_News_Article {
 				$url = $urls[1];
 				$item['url'] = $url;
 				$item['base_url'] = parse_url( $url, PHP_URL_HOST );
-				$item['published'] = 'pending';
+				$item['moderation'] = 'new';
 				$articles[] = $item;
 			}
 		}

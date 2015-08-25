@@ -6,11 +6,15 @@ $parties = get_parties_random();
 get_header(); ?>
 
 <div class="flow_it">
+	<?php $summary = Election_Data_Option::get_option( 'summary' );
+	if ( $summary ) : ?>
+		<div class="one_column medium_row">
+			<p><?php echo $summary; ?></p>
+		</div>
+	<?php endif; ?>
 	<div class="one_column medium_row">
-		Put Customized data from options here.
-	</div>
-	<div class="one_column medium_row">
-		<h2>The <?php echo "XXXX"; ?> Candidates</h2>
+		<h2><?php echo Election_Data_Option::get_option( 'constituency-label', 'Constituencies' ); ?></h2>
+		<p class="small grey"><?php echo Election_Data_Option::get_option( 'constituency-subtext' ); ?></p>
 		<?php foreach ( $constituencies as $constituency_id ) :
 			$constituency = get_constituency( $constituency_id ); ?>
 			<div class="mini_maps">
@@ -22,16 +26,36 @@ get_header(); ?>
 		<?php endforeach; ?>
 	</div>
 	<div class="one_column medium_row social">
-		Put Social Media from options here.
+		<?php $facebook = esc_attr( Election_Data_Option::get_option( 'facebook-page' ) );
+		if ( $facebook ) : ?>
+			<div class="fb-page" data-href="<?php echo $facebook; ?>" data-width="275" data-height="255" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true" data-show-posts="false">
+				<div class="fb-xfbml-parse-ignore">
+					<blockquote cite="<?php echo $facebook; ?>">
+						<a href="<?php echo $facebook; ?>">Manitoba Election</a>
+					</blockquote>
+				</div>
+			</div>
+		<?php endif;
+		$twitter = esc_attr( Election_Data_Option::get_option( 'twitter' ) );
+		if ( $twitter ) : ?>
+			<p><a href="http://twitter.com/<?php echo $twitter; ?>" class="twitter-follow-button">Follow @<?php echo $twitter; ?></a></p>
+		<?php endif;
+		if ( Election_Data_Option::get_option( 'google-plus-one' ) ) : ?>
+			<p><g:plusone></g:plusone></p>
+		<?php endif; ?>
+		
 	</div>
-	<div class="one_column latest_news_small">
-		<h2>Latest Election News</h2>
-		<?php display_news_titles( array(), true ); ?>
-	</div>
+	<?php $news_count = Election_Data_Option::get_option( 'news-count', 10 );
+	if ( $news_count ) : ?>
+		<div class="one_column latest_news_small">
+			<h2>Latest Election News</h2>
+			<?php display_news_titles( array(), true, $news_count ); ?>
+		</div>
+	<?php endif; ?>
 	<?php if ( $parties ) : ?>
 		<div class="two_columns">
-			<h2>The Political Parties</h2>
-			<p class="small grey"><?php echo "XXX" ?> Parties are displayed in random order.</p>
+			<h2><?php echo Election_Data_Option::get_option( 'party-label', 'The Political Parties' ); ?></h2>
+			<p class="small grey"><?php echo Election_Data_Option::get_option( 'party-subtext' ); ?></p>
 			<br>
 			<div class="parties_thumb" >
 				<?php foreach ( $parties as $party_id ) :

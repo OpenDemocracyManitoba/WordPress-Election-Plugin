@@ -35,6 +35,13 @@ class Election_Data_Deactivator {
 		
 		$news_articles = new Election_Data_News_Article( '', '', false );
 		$news_articles->stop_cron();
+		
+		$previous_theme = Election_Data_Option::get_option( 'previous_theme' );
+		if ( $previous_theme ) {
+			$theme = wp_get_theme( $previous_theme );
+			if ( $theme.exists() ) {
+				switch_theme( $theme );
+			}
+		}
 	}
-
 }

@@ -65,6 +65,7 @@ class Election_Data_Settings_Definition {
 		$tabs['import_tab'] = __( 'Import', self::$plugin_name );
 		$tabs['export_tab'] = __( 'Export', self::$plugin_name );
 		$tabs['news_scraping_tab'] = __( 'News Scraping', self::$plugin_name );
+		$tabs['front_page_tab'] = __( 'Front Page', self::$plugin_name );
 		//$tabs['second_tab']  = __( 'Second Tab', self::$plugin_name );
 
 		return apply_filters( 'election_data_settings_tabs', $tabs );
@@ -179,7 +180,59 @@ class Election_Data_Settings_Definition {
 					),
 					'no_value' => true,
 				),
-				/*'missing_callback'           => array(
+			),
+			'front_page_tab' => array(
+				'summary' => array(
+					'name' => __( 'Summary', self::$plugin_name ),
+					'desc' => __( 'A summary that will appear on the front page of the site. Can include links to important sites, election dates, etc.', self::$plugin_name ),
+					'type' => 'rich_editor',
+				),
+				'facebook-page' => array(
+					'name' => __( 'Facebook page', self::$plugin_name ),
+					'desc' => __( 'A facebook page that you would like featured on the front-page.', self::$plugin_name ),
+					'type' => 'text',
+				),
+				'twitter' => array(
+					'name' => __( 'Twitter Account', self::$plugin_name ),
+					'desc' => __( 'A twitter account you would like featured on the front page'. self::$plugin_name ),
+					'type' => 'text',
+				),
+				'google-plus-one' => array(
+					'name' => __( 'Google Plus One', self::$plugin_name ),
+					'desc' => __( 'Check if you would like a Google +1 button.', self::$plugin_name ),
+					'type' => 'checkbox',
+					'std' => true,
+				),
+				'constituency-label' => array(
+					'name' => __( 'Constiuency Label', self::$plugin_name ),
+					'desc' => __( 'The label you would like to use for the constituency section.', self::$plugin_name ),
+					'type' => 'text',
+				),
+				'constituency-subtext' => array(
+					'name' => __( 'Constituency Description', self::$plugin_name ),
+					'desc' => __( 'An optional description for the constituency section.', self::$plugin_name ),
+					'type' => 'text',
+				),
+				'party-label' => array(
+					'name' => __( 'Party Label', self::$plugin_name ),
+					'desc' => __( 'The label you would like to use for the party section.', self::$plugin_name ),
+					'type' => 'text',
+				),
+				'party-subtext' => array(
+					'name' => __( 'Party Description', self::$plugin_name ),
+					'desc' => __( 'An optional description for the party section.', self::$plugin_name ),
+					'type' => 'text',
+				),
+				'news-count' => array(
+					'name' => __( 'News Articles', self::$plugin_name ),
+					'desc' => __( 'The number of news articles to display on the front-page.', self::$plugin_name ),
+					'type' => 'number',
+					'min' => 0,
+					'step' => 5,
+				),
+			),
+			/*'xxx' => array(
+				'missing_callback'           => array(
 					'name' => '<strong>' . __( 'Missing Callback', self::$plugin_name ) . '</strong>',
 					'type' => 'non-exisit'
 				),
@@ -282,8 +335,8 @@ class Election_Data_Settings_Definition {
 					'name' => __( 'Rich Editor', self::$plugin_name ),
 					'desc' => __( 'Rich Editor save as HTML markups', self::$plugin_name ),
 					'type' => 'rich_editor'
-				),*/
-			),
+				),
+			),*/
 			/*'second_tab'  => array(
 				'extend_me' => array(
 					'name' => 'Extend me',

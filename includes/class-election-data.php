@@ -135,6 +135,8 @@ class Election_Data {
 		
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-candidate.php';
 		
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-activator.php';
+		
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-news-article.php';
 
 		$this->loader = new Election_Data_Loader();
@@ -190,6 +192,7 @@ class Election_Data {
 		$this->loader->add_action( 'load-toplevel_page_' . $this->get_plugin_name() , $plugin_meta_box, 'add_meta_boxes' );
 
 		$this->loader->add_action( 'wp_ajax_election_data_erase_site', $this, 'erase_data' );
+		$this->loader->add_action( 'admin_notices', 'Election_Data_Activator', 'display_activation_warnings' );
 	}
 
 	/**

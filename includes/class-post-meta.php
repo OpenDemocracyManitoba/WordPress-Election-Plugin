@@ -51,7 +51,7 @@ class Post_Meta {
 	 * @since 1.0
 	 *
 	 */
-	protected $post_meta_filters;
+	protected $meta_filters;
 	
 	/**
 	 * The post type for the custom fields.
@@ -90,7 +90,7 @@ class Post_Meta {
 	 * @param array $admin_columns
 	 *
 	 */
-	public function __construct( $meta_box, $fields, $admin_columns=array() ) {
+	public function __construct( $meta_box, $fields, $admin_columns = array(), $filters = array() ) {
 		if ( !is_admin() ) {
 			return;
 		}
@@ -116,18 +116,22 @@ class Post_Meta {
 			}
 		}
 		
+		$this->meta_filters = $filters;
+		
 		$this->prefix = "meta_{$this->post_type}_";
 		// Setup required actions and filters.
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
 		add_action( "save_post_{$this->post_type}", array( $this, 'save_post_fields' ) );
 		add_action( 'wp_ajax_save_post_meta_data', array( $this, 'save_post_fields_ajax' ) );
 		add_action( 'manage_posts_custom_column', array( $this, 'populate_columns' ) );
-		add_action( 'bulk_edit_custom_box', array( $this, 'bulk_quick_edit_custom_box' ) );
-		add_action( 'quick_edit_custom_box', array( $this, 'bulk_quick_edit_custom_box' ) );
+		add_action( 'bulk_edit_custom_box', array( $this, 'bulk_edit_custom_box' ) );
+		add_action( 'quick_edit_custom_box', array( $this, 'quick_edit_custom_box' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_filter( "manage_edit-{$this->post_type}_columns", array( $this, 'define_columns' ) );
 		add_filter( "manage_edit-{$this->post_type}_sortable_columns", array( $this, 'sort_columns' ) );
 		add_filter( 'request', array( $this, 'column_orderby' ) );
+		add_action( 'parse_query', array( $this, 'filter_meta' ) );;
+	    add_action( 'restrict_manage_posts', array( $this, 'add_meta_filter' ) );
 	}
 	
 	/**
@@ -271,20 +275,44 @@ class Post_Meta {
 			echo '</div>';
 		}
 	}
-
+	
 	/*
-	 * Adds meta data to the custom box used when quick or bulk editting the custom post.
+	 * Adds meta data to the custom box used when bulk editting the custom post.
 	 *
 	 * @since 1.0
 	 * @access public
 	 * @param string $column_name
 	 *
 	 */
-	public function bulk_quick_edit_custom_box( $column_name ) {
+	public function bulk_edit_custom_box( $column_name ) {
+		$this->bulk_quick_edit_custom_box( $column_name, 'bulk' );
+	}
+	
+	/*
+	 * Adds meta data to the custom box used when quick editting the custom post.
+	 *
+	 * @since 1.0
+	 * @access public
+	 * @param string $column_name
+	 *
+	 */
+	public function quick_edit_custom_box( $column_name ) {
+		$this->bulk_quick_edit_custom_box( $column_name, 'quick' );
+	}
+
+	/*
+	 * Adds meta data to the custom box used when quick or bulk editting the custom post.
+	 *
+	 * @since 1.0
+	 * @access protected
+	 * @param string $column_name
+	 *
+	 */
+	protected function bulk_quick_edit_custom_box( $column_name, $type ) {
 		if ( isset( $this->admin_columns[$column_name] ) ) {
 			$field = $this->fields[$column_name];
 			echo '<fieldset class="inline-edit-col-right"><div class="inline-edit-col"><div class="inline-edit-group">';
-			call_user_func( array( $this, "show_{$field['type']}" ), $field, 'quick', '' );
+			call_user_func( array( $this, "show_{$field['type']}" ), $field, $type, '' );
 			echo '</div></div></fieldset>';
 		}
 	}
@@ -328,48 +356,52 @@ class Post_Meta {
 	}
 	
 	/*
-	 * Adds a filter for to the administrative interface for the requested column.
+	 * Adds a filter to the administrative interface for the requested columns.
 	 *
 	 * @since 1.0
 	 * @access public
 	 *
 	 */
-	function filter_lists() {
+	function add_meta_filter() {
 		$screen = get_current_screen();
 		global $wp_query;
 		
 		if ( $this->post_type == $screen->post_type ) {
-			foreach ( $this->filter_columns as $filter_column ) {
-				if ( $taxonomy['args']['show_admin_column'] )
-				{
-					$query = $taxonomy['args']['query_var'];
-					$name = $taxonomy['name'];
-					$selected = '';
-					if ( isset( $wp_query->query[$query] ) ) {
-						$term = get_term_by( 'slug', $wp_query->query[$query], $name );
-						if ( $term ) {
-							$selected = (int)$term->term_id;
-						}
-					}
-					
-					$args = array(
-						'show_option_all' => "All {$taxonomy['args']['labels']['name']}",
-						'taxonomy' => $name,
-						'name' => $query,
-						'orderby' => 'name',
-						'selected' => $selected,
-						'hierarchical' => true,
-						'depth' => 3,
-						'show_count' => false,
-						'hide_empty' => false,
-						'value_field' => 'slug'
-					);
-					
-					wp_dropdown_categories( $args );
+			foreach ( $this->meta_filters as $field => $options ) {
+				$selected = isset( $_GET[$field] ) ? $_GET[$field] : '';
+				
+				echo "<select name='$field' id='$field' class='postform'>";
+				foreach ( $options as $value => $label ) {
+					echo "<option class='level-0' value='$value'";
+					selected( $selected, $value );
+					echo ">$label</option>";
+				}
+				echo '</select>';
+			}
+		}
+	}
+	
+	/**
+	 * Applies meta filters to the query.
+	 *
+	 * @since 1.0
+	 * @access public
+	 *
+	 */
+	public function filter_meta( $query ) {
+		global $pagenow;
+		$screen = get_current_screen();
+		
+		if ( is_admin() && $pagenow == 'edit.php' && $this->post_type == $screen->post_type ) {
+			foreach ( $this->meta_filters as $field => $options ) {
+				if ( ! empty( $_GET[$field] ) ) {
+					$query->query_vars['meta_key'] = $field;
+					$query->query_vars['meta_value'] = $_GET[$field];
 				}
 			}
 		}
 	}
+	
 	/*
 	 * Enqueus the scripts and styles required to edit the custom data.
 	 *
@@ -438,6 +470,7 @@ class Post_Meta {
 				$value = esc_attr( empty( $value ) ? $field['std'] : $value );
 				echo "<td><select name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' ";
 				break;
+			case 'bulk':
 			case 'quick':
 				$this->display_quick_label( $field, $mode );
 				$value = esc_attr( $field['std'] );	
@@ -450,6 +483,9 @@ class Post_Meta {
 		
 		if ( $mode != 'column' ) {
 			echo "value='$value'>";
+			if ( $mode == 'bulk' ) {
+				echo "<option value='0'>-</option>";
+			}
 			foreach ( $field['options'] as $option_value => $option_display ) {
 				echo "<option value='$option_value'>$option_display</option>";
 			}
@@ -479,6 +515,7 @@ class Post_Meta {
 				echo "<td><input type='$type' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' size='30' style='width:97%' />";
 				echo "<br />{$field['desc']}</td>";
 				break;
+			case 'bulk':
 			case 'quick':
 				$value = esc_attr( $field['std'] );
 				$this->display_quick_label ( $field, $mode );
@@ -504,6 +541,7 @@ class Post_Meta {
 					echo "<td class='hidden'><input type='hidden' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' /></td>";
 				}
 				break;
+			case 'bulk':
 			case 'quick':
 			case 'column':
 				break;
@@ -556,6 +594,7 @@ class Post_Meta {
 				echo "<td><input type='checkbox' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='true' $checked size='30' />";
 				echo "<br />{$field['desc']}</td>";
 				break;
+			case 'bulk':
 			case 'quick':
 				$this->display_quick_label ( $field, $mode );
 				echo "<input type='checkbox' name='{$this->prefix}{$field['id']}' value='true' />";

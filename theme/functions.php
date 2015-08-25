@@ -53,7 +53,19 @@ add_action( 'after_setup_theme', 'election_data_theme_setup' );
  * @since Election_Data_Theme 1.0
  */
 function election_data_theme_scripts() {
+	global $constituency_name;
+		
     wp_enqueue_style( 'style', get_stylesheet_uri() );
+	if ( is_front_page() ) {
+		wp_enqueue_script( 'facebook', get_template_directory_uri() . '/js/facebook.js' );
+		wp_enqueue_script( 'twitter', get_template_directory_uri() . '/js/twitter.js' );
+		wp_enqueue_script( 'google', 'https://apis.google.com/js/platform.js' );
+	}
+	
+	if ( is_tax( $constituency_name ) ) {
+		wp_enqueue_script( 'jquery-map-highlight', get_template_directory_uri() . '/js/jquery.maphilight.min.js', array( 'jquery' ) );
+		wp_enqueue_script( 'map-highlight', get_template_directory_uri() . '/js/map_highlight.js', array( 'jquery-map-highlight' ) );
+	}
 }
 add_action( 'wp_enqueue_scripts', 'election_data_theme_scripts' );
 
@@ -86,18 +98,8 @@ add_action( 'widgets_init', 'election_data_theme_widgets_init' );
 function election_data_init() {
 	register_nav_menu('header-menu', __( 'Header Menu' ) );
 }
+
 add_action( 'init', 'election_data_init' );
-
-function election_data_nav_menu_items( $items, $args ) {
-	if ( $args->theme_location == 'header-menu' ) {
-		error_log( print_r( $items, true ) );
-		error_log( print_r( $args, true ) );
-	}
-	
-	return $items;
-}
-add_filter( 'wp_nav_menu_items' , 'election_data_nav_menu_items', 10, 2 );
-
 
 $candidate_name = 'ed_candidates';
 $party_name = "{$candidate_name}_party";
@@ -297,7 +299,7 @@ function get_candidate( $candidate_id ) {
 	);
 }
 
-function get_news( $reference_id = null, $page = 0, $articles_per_page = 20 ) {
+function get_news( $reference_id = null, $page = 1, $articles_per_page = 20 ) {
 	global $news_article_name, $reference_name;
 	$args = array(
 		'post_type' => $news_article_name,
@@ -332,16 +334,20 @@ function get_news( $reference_id = null, $page = 0, $articles_per_page = 20 ) {
 	);
 }
 
-
-function display_news_titles ( $reference_ids = null, $show_more = false ) {
+function display_news_titles ( $reference_ids = null, $show_more = false, $count = 20, $pagination = false ) {
 	global $source_name, $reference_name, $party_name, $candidate_name, $news_article_name;
-	$news = get_news( $reference_ids );
+	$news = get_news( $reference_ids, 1, $count );
 	$articles = $news['articles'];
+	news_titles( $articles, $show_more, $reference_ids );
+}
+
+function news_titles( $article_query, $paging_type, $reference_ids = array(), $paging_args = array() ) {
+	global $reference_name, $news_article_name;
 	$last_date = '';
-	if ( $articles->have_posts() ) :
-		while ( $articles->have_posts() ) :
-			$articles->the_post();
-			$article_id = $articles->post->ID;
+	if ( $article_query->have_posts() ) :
+		while ( $article_query->have_posts() ) :
+			$article_query->the_post();
+			$article_id = $article_query->post->ID;
 			$date = get_the_date( 'l, j, F Y', $article_id );
 			if ( $date != $last_date ) :
 				if ( $last_date != '' ) : ?>
@@ -380,10 +386,13 @@ function display_news_titles ( $reference_ids = null, $show_more = false ) {
 			</li>
 		<?php endwhile; ?>
 		</ul>
-			<?php if ( $show_more ) : ?>
+		<?php if ( $paging_type === true ) : ?>
 			<p class="more"><a href="<?php echo get_post_type_archive_link( $news_article_name ); ?>">More News...</a></p>
-		<?php endif; ?>
-	<?php else : ?>
+		<?php elseif ( $paging_type ) :
+			$page = get_current_page( $paging_type );
+			display_news_pagination( get_paging_args( $paging_type, $page ) );
+		endif;
+	else : ?>
 		<em>No articles found yet.</em>
 	<?php endif;
 }
@@ -399,26 +408,49 @@ function display_news_pagination( $args ) {
 	echo paginate_links( $args );
 }
 
-function display_news_summaries ( $reference_ids, $type ) {
-	$articles_per_page = 20;
+function get_paging_args( $type, $page ) {
 	switch ( $type ) {
 		case 'Candidate':
-			$page = get_query_var( 'page' );
+		case 'Single':
 			$args = array(
 				'current' => $page ? $page : 1,
 				'format' =>'?page=%#%',
-				'add_fragment' => "#news",
 			);
 			break;
+		case 'News Article':
 		case 'Party':
-			$page = get_query_var( 'paged' );
+		case 'Constituency':
+		case 'Archive':
 			$args = array(
 				'current' => $page ? $page : 1,
-				'add_fragment' => "#news",
 			);
 			break;
 	}
-	
+	return $args;
+}
+
+function get_current_page( $type ) {
+	switch ( $type ) {
+		case 'Candidate':
+		case 'Single':
+			$page = get_query_var( 'page' );
+			break;
+		case 'News Article':
+		case 'Party':
+		case 'Constituency':
+		case 'Archive':
+			$page = get_query_var( 'paged' );
+			break;
+	}
+	return $page;
+}	
+
+function display_news_summaries ( $reference_ids, $type, $count = 20 ) {
+	$articles_per_page = 20;
+	$page = get_current_page( $type );
+	$args = get_paging_args( $type, $page );
+	$args['add_fragment'] = "#news";
+
 	if ( ! is_array( $reference_ids ) ) {
 		$reference_ids = array( $reference_ids );
 	}
@@ -538,6 +570,18 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 	</div>
 <?php }
 
+function display_all_candidates( $candidate_query )
+{
+	while ( $candidate_query->have_posts() ) {
+		$candidate_query->the_post();
+		$candidate_id = $candidate_query->post->ID;
+		$candidate = get_candidate( $candidate_id );
+		$constituency = get_constituency_from_candidate( $candidate_id );
+		$party  = get_party_from_candidate( $candidate_id );
+		$candidate_news = get_news( $candidate['reference_id'], 1, 1 );
+		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'constituency', 'news' ), 'name' );
+	}
+}
 
 function display_party_candidates( $candidate_query, $party, &$references )
 {
@@ -547,7 +591,7 @@ function display_party_candidates( $candidate_query, $party, &$references )
 		$candidate = get_candidate( $candidate_id );
 		$constituency = get_constituency_from_candidate( $candidate_id );
 		$references[] = $candidate['reference_id'];
-		$candidate_news = get_news( $candidate['reference_id'] ); 
+		$candidate_news = get_news( $candidate['reference_id'], 1, 1 ); 
 		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'constituency', 'news' ), 'constituency' );
 	}
 }
@@ -559,8 +603,7 @@ function display_constituency_candidates( $candidate_query, $constituency, &$ref
 		$candidate = get_candidate( $candidate_id );
 		$party = get_party_from_candidate( $candidate_id );
 		$references[] = $candidate['reference_id'];
-		$candidate_news = get_news( $candidate['reference_id'] );
+		$candidate_news = get_news( $candidate['reference_id'], 1, 1 );
 		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'news' ), 'name' );
 	}
 }
-
