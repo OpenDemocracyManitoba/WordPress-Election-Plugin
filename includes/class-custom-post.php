@@ -331,9 +331,9 @@ class ED_Custom_Post_Type {
 	 */
 	function order_by_taxonomy( $clauses, $wp_query ) {
 		global $wpdb;
-		if ( isset( $wp_query->query['orderby'] ) ) {
+		if ( isset( $wp_query->query_vars['orderby'] ) ) {
 			foreach ( $this->taxonomy_args as $taxonomy_name => $taxonomy ) {
-				if ( "taxonomy_name-$taxonomy_name" == $wp_query->query['orderby'] ) {
+				if ( "taxonomy-$taxonomy_name" == $wp_query->query_vars['orderby'] ) {
 					$clauses['join'] .= <<<SQL
 LEFT OUTER JOIN {$wpdb->term_relationships} tr2 ON {$wpdb->posts}.ID=tr2.object_id
 LEFT OUTER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id

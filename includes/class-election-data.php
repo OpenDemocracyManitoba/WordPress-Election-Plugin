@@ -251,6 +251,69 @@ class Election_Data {
 		return $this->version;
 	}
 	
+	public static function import_csv( $csv, $mode ) {
+		$headings = fgetcsv( $csv );
+		$found = true;
+		$fields = array( 'setting_name', 'type', 'value' );
+		foreach ( $fields as $field ) {
+			$found |= in_array( $field, $headings );
+		}
+		
+		if ( ! $found ) {
+			return false;
+		}
+		$importable_settings = array( 
+			'plugin' => array(
+				'location' => '',
+				'time' => '',
+				'frequency' => '',
+				'summary' => '',
+				'facebook-page' => '',
+				'twitter' => '',
+				'google-plus-one' => '',
+				'constituency-label' => '',
+				'constituency-subtext' => '',
+				'party-label' => '',
+				'party-subtet' => '',
+				'news-count' => '',
+			),
+			'wordpress' => array(
+				'blogname' => '',
+				'blogdescription' => '',
+				'timezone_string' => '',
+				'date_format' => '',
+				'posts_per_page' => '',
+				'permalink_structure' => '',
+				
+			),
+		);
+		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
+			$data = array_combine( $headings, $data );
+			if ( isset( $importable_settings[$data['type']][$data['setting_name']] ) ) {
+				switch ( $data['type'] ) {
+					case 'plugin':
+						$current_value = Election_Data_Option::get_option( $data['setting_name'], '' );
+						if ( $current_value == $data['value'] || ( 'no_overwrite' == $mode && $current_value ) ) {
+							continue;
+						}
+						Election_Data_Option::update_option( $data['setting_name'], $data['value'] );
+						break;
+					case 'wordpress':
+						$current_value = get_option( $data['setting_name'], '' );
+						if ( $current_value == $data['value'] || ( 'no_overwrite' == $mode && $current_value ) ) {
+							error_log( "skipping {$data['setting_name']}" );
+							continue;
+						}
+						error_log( "setting {$data['setting_name']}" );
+						update_option( $data['setting_name'], $data['value'] );
+						break;
+				}
+			}
+		}
+		
+		return true;
+	}
+	
 	public static function import( $file_type, $file_data, $mode ) {
 		set_time_limit( 60 * 60 );
 		$candidate = new Election_Data_Candidate( false );
@@ -263,6 +326,7 @@ class Election_Data {
 				$success = true;
 				break;
 			case 'csv_zip':
+				$mode = 'overwrite';
 				$success = true;
 				$zip = new ZipArchive();
 				$zip->open( $file_name );
@@ -279,20 +343,27 @@ class Election_Data {
 					$success |= $news_article->import_csv( $type, $csv, $mode );
 					fclose( $csv );
 				}
+				$csv = $zip->getStream( 'settings.csv' );
+				$success != self::import_csv( $csv, $mode );
+				$zip->close();
 				break;
 			case 'csv_candidate':
 			case 'csv_party':
 			case 'csv_constituency':
 				$type = substr( $file_type, 4 );
-				$csv = fopen( "$file_name", 'r');
+				$csv = fopen( $file_name, 'r' );
 				$success = $candidate->import_csv( $type, $csv, $mode );
 				break;
 			case 'csv_news_source':
 			case 'csv_news_article':
 			case 'csv_news_mention':
 				$type = substr( $file_type, 4 );
-				$csv = fopen( "$file_name", 'r');
+				$csv = fopen( $file_name, 'r' );
 				$success = $news_article->import_csv( $type, $csv, $mode );
+				break;
+			case 'csv_settings':
+				$csv = fopen( $file_name, 'r' );
+				$success = self::import_csv( $csv, $mode );
 				break;
 			default:
 				$success = false;
@@ -300,6 +371,39 @@ class Election_Data {
 		}
 		
 		return $success;
+	}
+	
+	public static function export_xml( $xml ) {
+	}
+	
+	public static function export_csv() {
+		plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-option.php';
+		plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-post-export.php';
+		$file_name = tempnam( 'tmp', 'csv' );
+		$csv = fopen( $file_name, 'w' );
+		$headings = array( 'setting_name', 'value', 'type' );
+		$headings_data = array_combine( $headings, $headings );
+		Post_Export::write_csv_row( $csv, $headings_data, $headings );
+		$exportable_settings = array(
+			'plugin' => array( 
+				array( 'Election_Data_Option', 'get_option' ),
+				array ( 'location', 'time', 'frequency', 'summary', 'facebook-page', 'twitter', 'google-plus-one', 'constituency-label', 'constituency-subtext', 'party-label', 'party-subtet', 'news-count' ),
+			),
+			'wordpress' => array(
+				'get_option',
+				array('blogname', 'blogdescription', 'timezone_string', 'date_format', 'posts_per_page', 'permalink_structure' ),
+			)
+		);
+		foreach ( $exportable_settings as $type => $settings ) {
+			$get_option = $settings[0];
+			foreach ( $settings[1] as $setting ) {
+				$data = array( 'setting_name' => $setting, 'type' => $type );
+				$data['value'] = $get_option( $setting );
+				Post_Export::write_csv_row( $csv, $data, $headings );
+			}
+		}
+		fclose( $csv );
+		return $file_name;
 	}
 	
 	public static function export( $file_type ) {
@@ -315,6 +419,7 @@ class Election_Data {
 				$xml->startDocument( '1.0' );
 				$candidate->export_xml( $xml );
 				$news_article->export_xml ( $xml );
+				self::export_xml( $xml );
 				$xml->endDocument();
 				$xml->flush();
 				$content_type = 'application/xml';
@@ -337,6 +442,9 @@ class Election_Data {
 					$zip->addFile( $csv_file, "$type.csv" );
 					$csv_files[] = $csv_file;
 				}
+				$csv_file = self::export_csv();
+				$zip->addFile( $csv_file, 'settings.csv' );
+				$csv_files[] = $csv_file;
 				
 				$zip->close();
 				foreach ( $csv_files as $csv_file ) {
@@ -360,6 +468,11 @@ class Election_Data {
 				$file = $news_article->export_csv( $type );
 				$content_type = 'text/csv';
 				$file_name = "$type.csv";
+				break;
+			case 'csv_settings':
+				$file = self::export_csv();
+				$content_type = 'text/csv';
+				$file_name = 'settings.csv';
 				break;
 			default:
 				return;

@@ -39,8 +39,8 @@ class Election_Data_Deactivator {
 		$previous_theme = Election_Data_Option::get_option( 'previous_theme' );
 		if ( $previous_theme ) {
 			$theme = wp_get_theme( $previous_theme );
-			if ( $theme.exists() ) {
-				switch_theme( $theme );
+			if ( $theme->exists() ) {
+				switch_theme( $previous_theme );
 			}
 		}
 	}

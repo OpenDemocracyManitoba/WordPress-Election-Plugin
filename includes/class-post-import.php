@@ -143,7 +143,9 @@ class Post_Import {
 		if ( !$post ) {
 			$args = array( 'post_type' => $post_type, 'post_status' => 'publish' );
 			foreach ( $post_fields as $post_name => $field_name ) {
-				$args[$post_name] = $data[$field_name];
+				if ( isset( $data[$field_name] ) ) {
+					$args[$post_name] = $data[$field_name];
+				}
 			}
 			
 			if ( empty( $args['post_name'] ) ) {

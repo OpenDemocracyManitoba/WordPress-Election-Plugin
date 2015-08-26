@@ -45,17 +45,19 @@ class Election_Data_Activator {
 		
 		$news_articles->setup_cron();
 		
-		$search_page = self::get_or_add_search_page();
-	
-		$menu_id = self::register_navigation( $news_articles, $search_page->ID );
-		
-		Election_Data_Option::set_option( 'menu-id', $menu_id );
-		
 		if ( ! self::setup_theme() ) {
 			$warnings = Election_Data_Option::get_option( 'warnings', array() );
 			$warnings[] = __ ( 'Unable to set up the Election Data Theme that is required for the plugin to work properly. Please copy the theme folder in the Election Data plugin to the wordpress theme folder and activate the Election Data Theme.' );
-			Election_Data_Option::set_option ( 'warnings', $warnings);
+			Election_Data_Option::update_option ( 'warnings', $warnings);
 		}
+
+		$search_page = self::get_or_add_search_page();
+		
+		error_log( print_r( $search_page, true ) );
+	
+		$menu_id = self::register_navigation( $news_articles, $search_page->ID );
+		
+		Election_Data_Option::update_option( 'menu-id', $menu_id );
 	}
 	
 	private static function recurse_copy($src,$dst) { 
@@ -75,22 +77,22 @@ class Election_Data_Activator {
 	}
 	
 	public static function same_themes( $a, $b ) {
-		$same = $a.exists() && $b.exists();
+		$same = $a->exists() && $b->exists();
 		if ( $same ) {
 			$headers = array( 'Version', 'Author' );
 			foreach ( $headers as $header ) {
-				$same &= $new_theme.get( $header ) == $original_theme.get( $header );
+				$same &= $a->get( $header ) == $b->get( $header );
 			}
 		}
 		return $same;
 	}
 	
 	public static function copy_theme( $dest_name ) {
-		$src_theme = wp_get_theme( 'theme', get_plugin_dir( __FILE__ ) . '../theme' );
+		$src_theme = wp_get_theme( 'theme', plugin_dir_path( __FILE__ ) . '..' );
 		$dest_theme = wp_get_theme( $dest_name );
 		
-		if ( $dest_theme.exists() ) {
-			if ( same_themes( $src_theme, $dest_theme ) ) {
+		if ( $dest_theme->exists() ) {
+			if ( self::same_themes( $src_theme, $dest_theme ) ) {
 				return '';
 			}
 			
@@ -114,14 +116,14 @@ class Election_Data_Activator {
 	
 	public static function setup_theme() {
 		$current_theme = get_stylesheet();
-		Election_Data_Option::set_option( 'previous_theme', $current_theme );
+		Election_Data_Option::update_option( 'previous_theme', $current_theme );
 
 		$theme_name = self::copy_theme( 'ElectionData' );
 		if ( $theme_name === false ) {
 			return false;
 		}
 		
-		Election_Data_Option::set_option( 'theme_name', $theme_name );
+		Election_Data_Option::update_option( 'theme_name', $theme_name );
 		
 		if ( ! $theme_name ) {
 			$theme_name = 'ElectionData';
@@ -156,14 +158,21 @@ class Election_Data_Activator {
 		$menu_id = wp_get_nav_menu_object( $menu_name );
 		if ( ! $menu_id ) {
 			$menu_id = wp_create_nav_menu( $menu_name );
-			error_log( "menu_id: $menu_id" );
 			wp_update_nav_menu_item( $menu_id, 0, array(
 				'menu-item-title' => __( 'Home' ),
 				'menu-item-url' => home_url( '/' ),
 				'menu-item-status' => 'publish',
 			) );
-			wp_update_nav_menu_item( $menu_id, 0, array(
+			$id = wp_update_nav_menu_item( $menu_id, 0, array(
 				'menu-item-title' => __( 'Candidates' ),
+				'menu-item-status' => 'publish',
+			) );
+			wp_update_nav_menu_item( $menu_id, 0, array(
+				'menu-item-title' => __( 'Party' ),
+				'menu-item-status' => 'publish',
+			) );
+			wp_update_nav_menu_item( $menu_id, 0, array(
+				'menu-item-title' => __( 'Constituency' ),
 				'menu-item-status' => 'publish',
 			) );
 			wp_update_nav_menu_item( $menu_id, 0, array(

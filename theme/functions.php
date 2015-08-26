@@ -58,7 +58,7 @@ function election_data_theme_scripts() {
     wp_enqueue_style( 'style', get_stylesheet_uri() );
 	if ( is_front_page() ) {
 		wp_enqueue_script( 'facebook', get_template_directory_uri() . '/js/facebook.js' );
-		wp_enqueue_script( 'twitter', get_template_directory_uri() . '/js/twitter.js' );
+		wp_enqueue_script( 'twitter', 'http://platform.twitter.com/widgets.js' );
 		wp_enqueue_script( 'google', 'https://apis.google.com/js/platform.js' );
 	}
 	
@@ -69,270 +69,12 @@ function election_data_theme_scripts() {
 }
 add_action( 'wp_enqueue_scripts', 'election_data_theme_scripts' );
 
-/**
- * Register widgetized area and update sidebar with default widgets
- *
- * @since Election_Data_Theme 1.0
- */
-function election_data_theme_widgets_init() {
-    register_sidebar( array(
-        'name' => __( 'Primary Widget Area', 'election_data_theme' ),
-        'id' => 'sidebar-1',
-        'before_widget' => '<aside id="%1$s" class="widget %2$s">',
-        'after_widget' => '</aside>',
-        'before_title' => '<h1 class="widget-title">',
-        'after_title' => '</h1>',
-    ) );
- 
-    register_sidebar( array(
-        'name' => __( 'Secondary Widget Area', 'election_data_theme' ),
-        'id' => 'sidebar-2',
-        'before_widget' => '<aside id="%1$s" class="widget %2$s">',
-        'after_widget' => '</aside>',
-        'before_title' => '<h1 class="widget-title">',
-        'after_title' => '</h1>',
-    ) );
-}
-add_action( 'widgets_init', 'election_data_theme_widgets_init' );
-
 function election_data_init() {
 	register_nav_menu('header-menu', __( 'Header Menu' ) );
+	add_theme_support( 'custom-header' );
 }
 
 add_action( 'init', 'election_data_init' );
-
-$candidate_name = 'ed_candidates';
-$party_name = "{$candidate_name}_party";
-$constituency_name = "{$candidate_name}_constituency";
-$news_article_name = 'ed_news_articles';
-$reference_name = "{$news_article_name}_reference";
-$source_name = "{$news_article_name}_source";
-
-function get_constituency( $constituency_id, $get_extra_data = true ) {
-	global $constituency_name;
-	$all_terms = get_terms( $constituency_name, array( 'include' => $constituency_id, 'hide_empty' => false ) );
-	$constituency_term = $all_terms[0];
-	$results = array(
-		'id' => $constituency_term->term_id,
-		'name' => $constituency_term->name,
-		'url' => get_term_link( $constituency_term, $constituency_name ),
-		'reference' => get_post_meta( $constituency_term->term_id, 'reference' ),
-	);
-	if ( $get_extra_data ) {
-		$results['details'] = get_tax_meta( $constituency_term->term_id, 'details' );
-		$map_image = get_tax_meta( $constituency_term->term_id, 'map' );
-		$results['map_id'] = $map_image ? $map_image['id'] : '';
-		
-		$child_terms = get_terms( $constituency_name, array( 'parent' =>$constituency_id, 'hide_empty' => false ) );
-		$results['children'] = array();
-		foreach ( $child_terms as $child )
-		{
-			$results['children'][$child->name] = array(
-				'url' => get_term_link( $child, $constituency_name ),
-				'coordinates' => get_tax_meta( $child->term_id, 'coordinates' ),
-			);
-		}
-	}
-	
-	return $results;
-}
-
-function get_constituency_from_candidate( $candidate_id ) {
-	global $constituency_name;
-	$all_terms = get_the_terms( $candidate_id, $constituency_name );
-	if ( isset( $all_terms[0] ) ) {
-		$constituency_term = $all_terms[0];
-		return get_constituency( $constituency_term->term_id, false );
-	} else {
-		return  array(
-			'id' => 0,
-			'name' =>'',
-			'url' => '',
-			'reference' => '',
-		);
-	}
-}
-
-function get_root_constituencies() {
-	global $constituency_name;
-	$args = array(
-		'orderby' => 'name',
-		'order' => 'ASC',
-		'hide_empty' => 'false',
-		'fields' => 'ids',
-		'parent' => 0,
-	);
-	
-	$terms = get_terms( $constituency_name , $args );
-	return $terms;
-}
-
-function get_parties_random() {
-	global $party_name;
-	$args = array(
-		'orderby' => 'id',
-		'order' => 'ASC',
-		'hide_empty' => 'false',
-		'fields' => 'ids',
-	);
-	
-	$terms = get_terms( $party_name , $args );
-	shuffle( $terms );
-	return $terms;
-}	
-
-function get_party( $party_id, $get_extra_data = true ) {
-	global $party_name;
-	$all_terms = get_terms( $party_name, array( 'include' => $party_id, 'hide_empty' => false ) );
-	$party_term = $all_terms[0];
-	
-	$results = array(
-		'name' => $party_term->name,
-		'colour' => get_tax_meta( $party_id, 'colour' ),
-		'url' => get_term_link( $party_term, $party_name ),
-		'long_title' => $party_term->description,
-		'reference_id' => get_tax_meta( $party_id, 'reference' ),
-	);
-		
-	if ( $get_extra_data ) {
-		$party_logo = get_tax_meta( $party_id, 'logo' );
-		$results['logo_id'] = $party_logo ? $party_logo['id'] : '';//Election_Data_Options::get_option( 'missing_party' );
-
-		$results['website'] = get_tax_meta( $party_id, 'website' );
-		$results['phone'] = get_tax_meta( $party_id, 'phone' );
-		$results['address'] = get_tax_meta( $party_id, 'address' );
-		$results['icon_data'] = array();
-		$results['reference'] = get_tax_meta( $party_id, 'conference' );
-		foreach ( array('email', 'facebook', 'youtube', 'twitter' ) as $icon_type ) {
-			$value = get_tax_meta( $party_id, $icon_type );
-			if ( $value ) {
-				switch ( $icon_type ) {
-					case 'email':
-						$url = "mailto:$value";
-						break;
-					case 'facebook':
-					case 'youtube':
-					case 'twitter':
-						$url = $value;
-						break;
-					default:
-						$url = '';
-				}
-
-				$alt = "{$icon_type}_active";
-			} else {
-				$url = '';
-				$alt = "{$icon_type}_inactive";
-			}
-				
-			$src = get_template_directory_uri() . "/images/$alt.jpg";
-			$results['icon_data'][$icon_type] = array( 'url' => $url, 'src' => $src, 'alt' => ucfirst( $alt ) );
-		}
-	}
-	
-	return $results;
-}
-
-function get_party_from_candidate( $candidate_id ) {
-	global $party_name;
-	$all_terms = get_the_terms( $candidate_id, $party_name );
-	if ( isset( $all_terms[0] ) ) {
-		$party_term = $all_terms[0];
-		$party_id = $party_term->term_id;
-		return get_party( $party_id, false );
-	} else {
-		return array(
-			'name' => '',
-			'colour' => '0x000000',
-			'url' => '',
-			'long_title' => '',
-			'reference_id' => '',
-		);
-	}
-}
-
-function get_candidate( $candidate_id ) {
-	$image_id = get_post_thumbnail_id( $candidate_id );
-	$image_id = $image_id ? $image_id : ''; //Election_Data_Options::get_option( 'missing_candidate' );
-	
-	$icon_data = array();
-	foreach ( array('email', 'facebook', 'youtube', 'twitter' ) as $icon_type ) {
-		$value = get_post_meta( $candidate_id, $icon_type, true );
-		if ( $value ) {
-			switch ( $icon_type ) {
-				case 'email':
-					$url = 'mailto:' . $value;
-					break;
-				case 'facebook':
-				case 'youtube':
-				case 'twitter':
-					$url = $value;
-					break;
-				default:
-					$url = '';
-			}
-
-			$alt = $icon_type . '_active';
-		} else {
-			$url = '';
-			$alt = $icon_type . '_inactive';
-		}
-			
-		$src = get_template_directory_uri() . "/images/$alt.jpg";
-		$icon_data[$icon_type] = array( 'url' => $url, 'src' => $src, 'alt' => ucfirst( $alt ) );
-	}
-
-	return array(
-		'image_id' => $image_id,
-		'icon_data' => $icon_data,
-		'reference_id' => get_post_meta( $candidate_id, 'reference', true ),
-		'name' => get_the_title( $candidate_id ),
-		'phone' => get_post_meta( $candidate_id, 'phone', true ),
-		'website' => get_post_meta( $candidate_id, 'website', true ),
-		'email' => get_post_meta( $candidate_id, 'email', true ),
-		'facebook' => get_post_meta( $candidate_id, 'facebook', true ),
-		'youtube' => get_post_meta( $candidate_id, 'youtube', true ),
-		'twitter' => get_post_meta( $candidate_id, 'twitter', true ),
-		'incumbent_year' => get_post_meta( $candidate_id, 'incumbent_year', true ),
-		'party_leader' => get_post_meta( $candidate_id, 'party_leader', true ),
-		'url' => get_permalink( $candidate_id ),
-	);
-}
-
-function get_news( $reference_id = null, $page = 1, $articles_per_page = 20 ) {
-	global $news_article_name, $reference_name;
-	$args = array(
-		'post_type' => $news_article_name,
-		'post_status' => 'publish',
-		'meta_query' => array(
-			array(
-				'key' => 'moderation',
-				'value' => 'approved',
-				'compare' => '=',
-			),
-		),
-		'paged' => $page,
-		'posts_per_page' => $articles_per_page,
-	);
-	
-	if ( ! empty( $reference_id ) ) {
-		$args['tax_query'] = array(
-			array(
-				'taxonomy' => $reference_name,
-				'field' => 'term_id',
-				'terms' => $reference_id,
-			),
-		);
-	}
-
-	
-	$news_query = new WP_Query( $args ); 
-	return array(
-		'count' => $news_query->found_posts,
-		'articles' => $news_query,
-		'reference_id' => $reference_id,
-	);
-}
 
 function display_news_titles ( $reference_ids = null, $show_more = false, $count = 20, $pagination = false ) {
 	global $source_name, $reference_name, $party_name, $candidate_name, $news_article_name;
@@ -345,10 +87,11 @@ function news_titles( $article_query, $paging_type, $reference_ids = array(), $p
 	global $reference_name, $news_article_name;
 	$last_date = '';
 	if ( $article_query->have_posts() ) :
+		$date_format = get_option( 'date_format' );
 		while ( $article_query->have_posts() ) :
 			$article_query->the_post();
 			$article_id = $article_query->post->ID;
-			$date = get_the_date( 'l, j, F Y', $article_id );
+			$date = get_the_date( $date_format, $article_id );
 			if ( $date != $last_date ) :
 				if ( $last_date != '' ) : ?>
 					</ul>
@@ -364,17 +107,7 @@ function news_titles( $article_query, $paging_type, $reference_ids = array(), $p
 					continue;
 				}
 				$reference_id = get_tax_meta( $reference->term_id, 'reference_post_id' );
-				$parent = get_term( $reference->parent, $reference_name );
-				switch ( $parent->name ) :
-					case 'Party':
-						$url = get_term_link( get_term( $reference_id, $reference ), $party_name );
-						break;
-					case 'Candidate':
-						$url = get_permalink( get_post( $reference_id ) );
-						break;
-					default:
-						$url = '';
-				endswitch;
+				$url = get_permalink( get_post( $reference_id ) );
 				$name = esc_attr( $reference->name );
 				$mentions[] = "<a href='$url'>$name</a>";
 			endforeach; ?>
@@ -397,7 +130,6 @@ function news_titles( $article_query, $paging_type, $reference_ids = array(), $p
 	<?php endif;
 }
 
-
 function display_news_pagination( $args ) {
 	$default_args = array(
 		'mid_size' => 1,
@@ -408,42 +140,6 @@ function display_news_pagination( $args ) {
 	echo paginate_links( $args );
 }
 
-function get_paging_args( $type, $page ) {
-	switch ( $type ) {
-		case 'Candidate':
-		case 'Single':
-			$args = array(
-				'current' => $page ? $page : 1,
-				'format' =>'?page=%#%',
-			);
-			break;
-		case 'News Article':
-		case 'Party':
-		case 'Constituency':
-		case 'Archive':
-			$args = array(
-				'current' => $page ? $page : 1,
-			);
-			break;
-	}
-	return $args;
-}
-
-function get_current_page( $type ) {
-	switch ( $type ) {
-		case 'Candidate':
-		case 'Single':
-			$page = get_query_var( 'page' );
-			break;
-		case 'News Article':
-		case 'Party':
-		case 'Constituency':
-		case 'Archive':
-			$page = get_query_var( 'paged' );
-			break;
-	}
-	return $page;
-}	
 
 function display_news_summaries ( $reference_ids, $type, $count = 20 ) {
 	$articles_per_page = 20;
@@ -467,6 +163,7 @@ function display_news_summaries ( $reference_ids, $type, $count = 20 ) {
 			$articles->the_post();
 			$article = $articles->post;
 			$summaries = get_post_meta( $article->ID, 'summaries', true );
+			$date_format = get_option( 'date_format' );
 			foreach ( $reference_ids as $reference_id ) :
 				if( empty( $summaries[$reference_id] ) ){
 					continue;
@@ -477,7 +174,7 @@ function display_news_summaries ( $reference_ids, $type, $count = 20 ) {
 				$source_label = esc_html( $source->description ? $source->description : $source->name ); ?>
 				<div class="news-article">	
 					<h3><a href="<?php echo esc_attr( get_post_meta( $article->ID, 'url', true ) ); ?>"><?php echo get_the_title( $article->ID ); ?></a></h3>
-					<p class="date"><?php echo get_the_date( 'l, j F Y', $article->ID ); ?></p>
+					<p class="date"><?php echo get_the_date( $date_format, $article->ID ); ?></p>
 					<p class="summary" >
 						<em><?php echo $source_label; ?></em>
 						- <?php echo $summary; ?>
@@ -507,7 +204,7 @@ function display_party( $party ) {
 			<?php if ( $icon['url'] ) : ?>
 				<a href="<?php echo esc_attr( $icon['url'] ); ?>">
 			<?php endif; ?>
-			<img alt="<?php echo esc_attr( $icon['alt'] ); ?>" src="<?php echo esc_attr( $icon['src'] ); ?>" />
+			<img alt="<?php echo esc_attr( $icon['alt'] ); ?>" src="<?php echo esc_attr( get_template_directory_uri() . "/images/{$icon['type']}.jpg" ); ?>" />
 			<?php if ( $icon['url'] ): ?>
 				</a>
 			<?php endif; ?>
@@ -558,7 +255,7 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 				if ( $icon['url'] ) : ?>
 					<a href="<?php echo esc_attr( $icon['url'] ); ?>">
 				<?php endif; ?>
-				<img alt="<?php echo esc_attr( $icon['alt'] ); ?>" src="<?php echo esc_attr( $icon['src'] ); ?>" />
+				<img alt="<?php echo esc_attr( $icon['alt'] ); ?>" src="<?php echo esc_attr( get_template_directory_uri() . "/images/{$icon['type']}.jpg" ); ?>" />
 				<?php if ( $icon['url'] ): ?>
 					</a>
 				<?php endif;

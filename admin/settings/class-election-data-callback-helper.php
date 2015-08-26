@@ -31,6 +31,10 @@ class Election_Data_Callback_Helper {
 		$this->plugin_name = $plugin_name;
 
 	}
+	
+	private function get_attribute_value( $value ) {
+		return "election_data_settings[$value]";
+	}
 
 	private function get_id_attribute( $id ) {
 		return ' id="election_data_settings[' . $id . ']" ';
@@ -73,6 +77,37 @@ class Election_Data_Callback_Helper {
 	public function header_callback( $args ) {
 		echo '<hr/>';
 	}
+	
+	public static function localize_image( $element_settings ) {
+		$translation_array = array();
+		foreach ( $element_settings as $settings ) {
+			$id = $settings[0];
+			$options = $settings[1];
+			$translation_array[$id] = "election_data_settings[$id]";
+		}
+		
+		return array( 'ed_settings_image_data' => $translation_array );
+	}
+	
+	public static function js_dependancies_image() {
+		wp_enqueue_media();
+		
+		return array( 'jquery', 'media-upload', 'thickbox' );
+	}
+	
+	public function image_callback( $args ) {
+		$value = Election_Data_Option::get_option( $args['id'], '' );
+		$url = $value ? esc_url( wp_get_attachment_url( $value ) ) : '';
+		$attr_base = $this->get_attribute_value( $args['id'] );
+		?>
+		<image id="<?php echo $attr_base; ?>_img" src='<?php echo $url; ?>'/>
+		<input type='text' <?php echo $this->get_id_and_name_attrubutes( $args['id'] ); ?> value='<?php echo $value; ?>' style='display:none' >
+		<br><input type='button' id="<?php echo $attr_base; ?>_add" name="<?php echo $attr_base; ?>_add" value='Select Image' <?php echo $value ? 'class="hidden"' : ''; ?>/>
+		<br><input type='button' id="<?php echo $attr_base; ?>_del" name="<?php echo $attr_base; ?>_del" value='Remove Image' <?php echo $value ? '' : 'class="hidden"'; ?>/>
+		<?php if ( $args['desc'] ) : ?>
+			<br><label><?php echo $args['desc']; ?></label>
+		<?php endif;
+	}
 
 	public function button_callback( $args ) {
 		$options = $args['options']
@@ -83,7 +118,7 @@ class Election_Data_Callback_Helper {
 		<?php endif;
 	}
 	
-	public function display_import_export( $mode, $args ) {
+	protected function display_import_export( $mode, $args ) {
 		$options = $args['options'];
 		$form_id = "{$options['id']}_form";
 		$radio_name = "election_data_settings[{$args['id']}]";
@@ -115,6 +150,15 @@ class Election_Data_Callback_Helper {
 						$disabled = $loaded ? '' : ' disabled';
 					else :
 						$disabled = '';
+					endif;
+					if ( isset( $options['skip_if_modules_loaded'][$type] ) ) :
+						$loaded = false;
+						foreach ( $options['skip_if_modules_loaded'][$type] as $module ) :
+							$loaded |= extension_loaded( $module );
+						endforeach;
+						if ( $loaded ) :
+							continue;
+						endif;
 					endif;
 					$radio_id = "election_data_settings[{$args['id']}][$type]"; ?>
 					<li><input type="radio" name="<?php echo $radio_name; ?>" value="<?php echo $type; ?>" id="<?php echo "$radio_id"; ?>" <?php echo checked( $type, $options['default'], false ) . $disabled ?>/>

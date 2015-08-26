@@ -15,6 +15,14 @@ require_once plugin_dir_path( __FILE__ ) . 'class-custom-post.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-post-import.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-post-export.php';
 
+global $candidate_name;
+$candidate_name = 'ed_candidates';
+global $party_name;
+$party_name = "{$candidate_name}_party";
+global $constituency_name;
+$constituency_name = "{$candidate_name}_constituency";
+
+
 /**
  * Sets up and handles the candidate custom post type.
  *
@@ -64,10 +72,14 @@ class Election_Data_Candidate {
 	 *
 	 */
 	public function __construct( $define_hooks = true ) {
-		$this->post_type = 'ed_candidates';
+		global $candidate_name;
+		global $party_name;
+		global $constituency_name;
+		
+		$this->post_type = $candidate_name;
 		$this->taxonomies = array(
-			'party' => "{$this->post_type}_party",
-			'constituency' => "{$this->post_type}_constituency",
+			'party' => $party_name,
+			'constituency' => $constituency_name,
 		);
 		$args = array(
 			'custom_post_args' => array(

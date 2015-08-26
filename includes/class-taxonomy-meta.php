@@ -161,8 +161,8 @@ class Tax_Meta {
 		{
 			$header = '<td>';
 			$footer = '</td></tr>';
-			if ( !empty( $value['id'] ) ) {
-				$image_id = esc_attr($value['id']);
+			if ( !empty( $value ) ) {
+				$image_id = esc_attr($value);
 				$image_url = esc_url(wp_get_attachment_url( $image_id ));
 				$add_class = 'class="hidden"';
 				$del_class = '';
@@ -274,8 +274,7 @@ class Tax_Meta {
 	}
 	
 	protected function get_posted_image( $field_id ) {
-		$id = stripslashes( $_POST[$field_id] );
-		return array( 'id' => $id, 'url' => wp_get_attachment_url( $id ) );
+		return stripslashes( $_POST[$field_id] );
 	}
 	
 	protected function get_posted_wysiwyg( $field_id ) {
@@ -286,8 +285,9 @@ class Tax_Meta {
 		if ( isset($_POST['action'] ) && ( 'editedtag' == $_POST['action'] || 'add-tag' == $_POST['action'] ) ) {
 			$term_meta = get_tax_meta_all( $term_id );
 			foreach ( $this->fields as $field ) {
+				$field_id = "{$this->prefix}{$field['id']}";
 				if ( isset( $_POST[$field_id] ) ) {
-					$term_meta[$field['id']] = call_user_func( array( $this, "get_posted_{$field['type']}" ), "{$this->prefix}{$field['id']}" );
+					$term_meta[$field['id']] = call_user_func( array( $this, "get_posted_{$field['type']}" ), $field_id );
 				}
 			}
 
@@ -328,7 +328,7 @@ class Tax_Meta {
 		foreach ( $this->fields as $field ) {
 			if ( $field['imported'] ) {
 				if ( 'image' == $field['type'] ) {
-					$image_id = isset( $meta_values[$field['id']] ) ? $meta_values[$field['id']]['id'] : 0;
+					$image_id = isset( $meta_values[$field['id']] ) ? $meta_values[$field['id']] : 0;
 					if ( $image_id ){
 						$image_meta = wp_get_attachment_metadata( $image_id );
 						$upload_dir = wp_upload_dir();
@@ -363,9 +363,7 @@ class Tax_Meta {
 		foreach ( $this->fields as $field ) {
 			if ( $field['imported'] && ( 'overwrite' == $mode || empty( $meta_values[$field['id']] ) ) ) {
 				if ( 'image' == $field['type'] ) {
-					$attachment_id = Post_Import::add_image_data( $data, $field['id'] );
-					$url = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
-					$meta_values[$field['id']] = array( 'id' => $attachment_id, 'url' => $url );
+					$meta_values[$field['id']] = Post_Import::add_image_data( $data, $field['id'] );
 				} elseif ( ! empty( $data[$field['id']] ) ) {
 					$meta_values[$field['id']] = maybe_unserialize( $data[$field['id']] );
 					if ( isset( $field['post_unserialize'] ) ) {

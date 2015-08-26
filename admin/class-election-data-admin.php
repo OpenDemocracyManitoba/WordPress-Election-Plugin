@@ -61,7 +61,19 @@ class Election_Data_Admin {
 		global $current_screen;
 		wp_enqueue_script( 'postbox' );
 		if ( 'toplevel_page_election-data' == $current_screen->id ) {
-			wp_enqueue_script( 'ed_settings', plugin_dir_url( __FILE__ ) . 'js/settings.js', array( 'jquery' ) );
+			$script_name = 'ed_settings';
+			$js_updates = Election_Data_Settings_Definition::get_js_updates();
+			$localizations = $js_updates[0];
+			$js_updates[1][] = 'jquery';
+			$dependancies = array_unique( $js_updates[1] );
+			
+			wp_register_script( $script_name, plugin_dir_url( __FILE__ ) . 'js/settings.js', $dependancies ); 
+			
+			foreach ( $localizations as $local_var => $local_array ) {
+				wp_localize_script( $script_name, $local_var, $local_array );
+			}
+			
+			wp_enqueue_script( $script_name );
 		}
 	}
 

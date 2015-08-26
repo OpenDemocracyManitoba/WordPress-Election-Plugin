@@ -17,28 +17,11 @@ get_header(); ?>
                 </header><!-- .entry-header -->
  
                 <div class="entry-content">
-                    <p><?php _e( 'It looks like nothing was found at this location. Maybe try one of the links below or a search?', 'election_data_theme' ); ?></p>
+                    <p><?php _e( 'It looks like nothing was found at this location. Maybe try one of the links above or a search?', 'election_data_theme' ); ?></p>
  
                     <?php get_search_form(); ?>
  
-                    <?php the_widget( 'WP_Widget_Recent_Posts' ); ?>
- 
-                    <div class="widget">
-                        <h2 class="widgettitle"><?php _e( 'Most Used Categories', 'election_data_theme' ); ?></h2>
-                        <ul>
-                        <?php wp_list_categories( array( 'orderby' => 'count', 'order' => 'DESC', 'show_count' => 1, 'title_li' => '', 'number' => 10 ) ); ?>
-                        </ul>
-                    </div><!-- .widget -->
- 
-                    <?php
-                    /* translators: %1$s: smilie */
-                    $archive_content = '<p>' . sprintf( __( 'Try looking in the monthly archives. %1$s', 'election_data_theme' ), convert_smilies( ':)' ) ) . '</p>';
-                    the_widget( 'WP_Widget_Archives', 'dropdown=1', "after_title=</h2>$archive_content" );
-                    ?>
- 
-                    <?php the_widget( 'WP_Widget_Tag_Cloud' ); ?>
- 
-                </div><!-- .entry-content -->
+                 </div><!-- .entry-content -->
             </article><!-- #post-0 .post .error404 .not-found -->
  
         </div><!-- #content .site-content -->
