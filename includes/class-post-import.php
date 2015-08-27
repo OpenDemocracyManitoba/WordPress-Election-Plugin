@@ -3,8 +3,15 @@
 class Post_Import {
 	static function read_csv_line( $csv, $headings )
 	{
-		$data = fgetcsv( $csv );
-		return array_combine( $headings, $data );
+		if ( ( $data = fgetcsv( $csv ) ) !== false ) {
+			if ( count( $headings ) != count( $data ) ) {
+				return false;
+			}
+			
+			return array_combine( $headings, $data );
+		} else {
+			return false;
+		}
 	}
 	
 	static function get_or_create_term( $taxonomy, $data, $term_fields, $parent_field, $mode ) {
@@ -76,7 +83,7 @@ class Post_Import {
 			fclose( $src );
 		} elseif ( !empty( $data["{$field_name}_url"] ) ) {
 			$file_name = $data["{$field_name}_url"];
-			$src_name = wp_download( $file_name );
+			$src_name = download_url( $file_name );
 			if ( is_wp_error( $src_name ) )
 			{
 				return 0;
@@ -90,7 +97,7 @@ class Post_Import {
 		$file_array['name'] = basename( $matches[0] );
 		$file_array['tmp_name'] = $src_name;
 		
-		$id = media_handle_sideload( $file_array, $post_id, $desc );
+		$id = media_handle_sideload( $file_array, $post_id, $desc );	
 		
 		return $id;
 	}
@@ -211,8 +218,7 @@ class Post_Import {
 		
 		$current_posts = self::get_current_posts( $post_type );
 		
-		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
-			$data = array_combine( $headings, $data );
+		while ( ( $data = self::read_csv_line( $csv, $headings ) ) !== false ) {
 			$data = self::apply_defaults( $data, $default_values );
 			$post = self::get_or_create_post( $post_type, $current_posts, $data, $post_fields, $mode );
 			
@@ -264,8 +270,7 @@ class Post_Import {
 			return false;
 		}
 
-		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
-			$data = array_combine( $headings, $data );
+		while ( ( $data = self::read_csv_line( $csv, $headings ) ) !== false ) {
 			$data = self::apply_defaults( $data, $default_values );
 			$term = self::get_or_create_term( $taxonomy_name, $data, $taxonomy_fields, $parent_field, $mode );
 

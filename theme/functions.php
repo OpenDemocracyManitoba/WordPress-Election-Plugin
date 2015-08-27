@@ -69,6 +69,23 @@ function election_data_theme_scripts() {
 }
 add_action( 'wp_enqueue_scripts', 'election_data_theme_scripts' );
 
+function configure_menu() {
+	$menu_name = 'Election Data Navigation Menu';
+	$menu_id = wp_get_nav_menu_object( $menu_name );
+	if ( $menu_id ) {
+		
+		$locations = get_theme_mod( 'nav_menu_locations' );
+		if ( empty( $locations['header-menu'] ) ) {
+			$locations['header-menu'] = $menu_id;
+			set_theme_mod( 'nav_menu_locations', $locations );
+		}
+	}
+	
+	delete_option( 'edt_theme_menu_check' );
+}
+
+add_action( 'after_switch_theme', 'configure_menu' );
+
 function election_data_init() {
 	register_nav_menu('header-menu', __( 'Header Menu' ) );
 	add_theme_support( 'custom-header' );

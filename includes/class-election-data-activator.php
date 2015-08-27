@@ -44,29 +44,29 @@ class Election_Data_Activator {
 		flush_rewrite_rules();
 		
 		$news_articles->setup_cron();
+
+		$search_page = self::get_or_add_search_page();
+			
+		$menu_id = self::register_navigation( $news_articles, $search_page->ID );
 		
 		if ( ! self::setup_theme() ) {
+			error_log( 'Warnings' );
 			$warnings = Election_Data_Option::get_option( 'warnings', array() );
 			$warnings[] = __ ( 'Unable to set up the Election Data Theme that is required for the plugin to work properly. Please copy the theme folder in the Election Data plugin to the wordpress theme folder and activate the Election Data Theme.' );
 			Election_Data_Option::update_option ( 'warnings', $warnings);
 		}
 
-		$search_page = self::get_or_add_search_page();
-		
-		error_log( print_r( $search_page, true ) );
-	
-		$menu_id = self::register_navigation( $news_articles, $search_page->ID );
-		
-		Election_Data_Option::update_option( 'menu-id', $menu_id );
+		set_theme_mod(y
+
 	}
 	
-	private static function recurse_copy($src,$dst) { 
+	private static function recurse_copy($src, $dst) { 
 		$dir = opendir($src); 
 		@mkdir($dst); 
 		while(false !== ( $file = readdir($dir)) ) { 
 			if (( $file != '.' ) && ( $file != '..' )) { 
 				if ( is_dir($src . '/' . $file) ) { 
-					recurse_copy($src . '/' . $file,$dst . '/' . $file); 
+					self::recurse_copy($src . '/' . $file,$dst . '/' . $file); 
 				} 
 				else { 
 					copy($src . '/' . $file,$dst . '/' . $file); 
@@ -88,6 +88,9 @@ class Election_Data_Activator {
 	}
 	
 	public static function copy_theme( $dest_name ) {
+		if ( ! is_writable( get_theme_root() ) ) {
+			return false;
+		}
 		$src_theme = wp_get_theme( 'theme', plugin_dir_path( __FILE__ ) . '..' );
 		$dest_theme = wp_get_theme( $dest_name );
 		
@@ -96,7 +99,7 @@ class Election_Data_Activator {
 				return '';
 			}
 			
-			$dest = tmpnam( get_theme_root(), 'ElectionData' );
+			$dest = tempnam( get_theme_root(), 'ElectionData' );
 			unlink( $dest );
 			if ( dirname( $dest ) != get_theme_root() ) {
 				return false;
@@ -105,13 +108,9 @@ class Election_Data_Activator {
 			$dest = get_theme_root() . '/ElectionData';
 		}
 		
-		self::recurse_copy( $plugin_dir_path( '../theme' ), $dest );
-		$dest_theme = wp_get_theme( basename( $dest ) );
-		if ( $dest_theme.exists() ) {
-			return basename( $dest );
-		}
-		
-		return false;
+		self::recurse_copy( plugin_dir_path( __FILE__ ) . '../theme', $dest );
+
+		return basename( $dest );
 	}
 	
 	public static function setup_theme() {
@@ -119,6 +118,7 @@ class Election_Data_Activator {
 		Election_Data_Option::update_option( 'previous_theme', $current_theme );
 
 		$theme_name = self::copy_theme( 'ElectionData' );
+		error_log( "theme_name: '$theme_name'" );
 		if ( $theme_name === false ) {
 			return false;
 		}
@@ -129,6 +129,7 @@ class Election_Data_Activator {
 			$theme_name = 'ElectionData';
 		}
 		
+		error_log( 'switching theme' );
 		switch_theme( $theme_name );
 		return true;
 	}
@@ -170,10 +171,12 @@ class Election_Data_Activator {
 			wp_update_nav_menu_item( $menu_id, 0, array(
 				'menu-item-title' => __( 'Party' ),
 				'menu-item-status' => 'publish',
+				'menu-item-parent-id' => $id,
 			) );
 			wp_update_nav_menu_item( $menu_id, 0, array(
 				'menu-item-title' => __( 'Constituency' ),
 				'menu-item-status' => 'publish',
+				'menu-item-parent-id' => $id,
 			) );
 			wp_update_nav_menu_item( $menu_id, 0, array(
 				'menu-item-title' => __( 'Latest News' ),
@@ -212,6 +215,8 @@ class Election_Data_Activator {
 				<?php endforeach; ?>
 			</div>
 		<?php endif;
+		
+		Election_Data_Option::delete_option( 'warnings' );
 	}
 	
 }

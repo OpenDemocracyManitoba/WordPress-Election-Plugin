@@ -507,7 +507,7 @@ class Election_Data_News_Article {
 		}
 	}
 	
-	protected function process_reference_news_articles( $reference_name, $reference_id, $sources, $auto_publish_sources, $auto_reject_sources, $source_parents ) {
+	protected function process_reference_news_articles( $reference_name, $reference_id, &$sources, $auto_publish_sources, $auto_reject_sources, $source_parents ) {
 		$format = "%30s: %10s, %10s";
 		error_log( " - - Begin Scraping for $reference_name" );
 		error_log( sprintf( $format, "Reference Start", memory_get_usage( true ), memory_get_usage( false ) ) );
@@ -519,7 +519,10 @@ class Election_Data_News_Article {
 		foreach ( $mentions as $mention ) {
 			//error_log( sprintf( $format, "Mention Start", memory_get_usage( true ), memory_get_usage( false ) ) );
 			if ( !isset( $sources[$mention['base_url']] ) ) {
+				error_log( 'base_url: ' . print_r( $mention['base_url'], true ) );
+				error_log( 'source: ' . print_r( $mention['source'], true ) );
 				$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source'], array( 'parent' => $source_parents['New'], 'description' => $mention['source'] ) );
+				error_log( 'term: ' . print_r( $term, true ) );
 				$sources[$mention['base_url']] = $term['term_id'];
 				$sources_by_parent['New'][$mention['base_url']] = $term['term_id'];
 				continue;
@@ -552,8 +555,8 @@ class Election_Data_News_Article {
 					'post_title' => $mention['title'],
 					'post_status' => 'publish',
 					'post_type' => $this->post_type,
-					'post_date_gmt' => $mention['publication_date']->set_time_zone( new DateTimeZone( 'GMT' ) )->format( 'Y-m-d H:i:s' ),
-					'post_date' => $mention['publication_date']->set_time_zone( $current_time_zone )->format( 'Y-m-d H:i:s'), 
+					'post_date_gmt' => $mention['publication_date']->setTimezone ( new DateTimeZone( 'GMT' ) )->format( 'Y-m-d H:i:s' ),
+					'post_date' => $mention['publication_date']->setTimezone ( $current_time_zone )->format( 'Y-m-d H:i:s'), 
 				);
 				$article_id = wp_insert_post( $post );
 				update_post_meta( $article_id, 'url', $mention['url'] );
@@ -879,7 +882,7 @@ class Election_Data_News_Article {
 	protected function import_news_mention_csv ($csv, $mode ) {
 		$headings = fgetcsv( $csv );
 		$found = true;
-		$fields = array( 'news_article', 'mention_type', 'mention', 'summary' );
+		$fields = array( 'news_article', 'mention', 'summary' );
 		foreach ( $fields as $field ) {
 			$found &= in_array( $field, $headings );
 		}
@@ -905,36 +908,22 @@ class Election_Data_News_Article {
 				$articles = $current_articles['url'][$data['news_article']];
 			}
 			$references = array();
-			if ( $data['mention_type'] == 'Party' )
-			{
-				$term = get_term_by( 'slug', $data['mention'], $this->candidate['party'] );
-				if ( !$term ) {
-					$term = get_term_by( 'name', $data['mention'], $this->candidate['party'] );
-				}
-				if ( $term ) {
-					$references[] = get_tax_meta( $term->term_id, 'reference' );
-				}
-			} elseif ( $data['mention_type'] == 'Candidate' )
-			{
-				if ( isset( $current_candidates['post_name'][$data['mention']] ) ) {
-					$candidate = $current_candidates['post_name'][$data['mention']];
+			if ( isset( $current_candidates['post_name'][$data['mention']] ) ) {
+				$candidate = $current_candidates['post_name'][$data['mention']];
+				$references[] = get_post_meta( $candidate->ID, 'reference', true );
+			} elseif ( isset( $current_candidates['post_title'][$data['mention']] ) ) {
+				$candidates = $current_candidates['post_title'][$data['mention']];
+				foreach ( $candidates as $candidate ) {
 					$references[] = get_post_meta( $candidate->ID, 'reference', true );
-				} elseif ( isset( $current_candidates['post_title'][$data['mention']] ) ) {
-					$candidates = $current_candidates['post_title'][$data['mention']];
-					foreach ( $candidates as $candidate ) {
-						$references[] = get_post_meta( $candidate->ID, 'reference', true );
-					}
 				}
 			}
 			if ( !empty( $articles ) && !empty( $references ) ) {
 				foreach ( $references as $reference ) {
 					foreach ($articles as $article ) {
 						wp_set_object_terms( $article->ID, (int)$reference, $this->taxonomies['reference'], true );
-						if ( 'Candidate' == $data['mention_type'] ) {
-							$summaries = get_post_meta( $article->ID, 'summaries', true );
-							$summaries[$reference] = $data['summary'];
-							update_post_meta( $article->ID, 'summaries', $summaries );
-						}
+						$summaries = get_post_meta( $article->ID, 'summaries', true );
+						$summaries[$reference] = $data['summary'];
+						update_post_meta( $article->ID, 'summaries', $summaries );
 					}
 				}
 			}	
