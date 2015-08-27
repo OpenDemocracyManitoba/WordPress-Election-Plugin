@@ -55,9 +55,6 @@ class Election_Data_Activator {
 			$warnings[] = __ ( 'Unable to set up the Election Data Theme that is required for the plugin to work properly. Please copy the theme folder in the Election Data plugin to the wordpress theme folder and activate the Election Data Theme.' );
 			Election_Data_Option::update_option ( 'warnings', $warnings);
 		}
-
-		set_theme_mod(y
-
 	}
 	
 	private static function recurse_copy($src, $dst) { 
