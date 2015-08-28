@@ -1,34 +1,30 @@
 <?php
 /**
- * The Template for displaying all single posts.
+ * The template for displaying all single posts and attachments
  *
- * @package Election_Data_Theme
- * @since Election_Data_Theme 1.0
+ * @package WordPress
+ * @subpackage Twenty_Fifteen
+ * @since Twenty Fifteen 1.0
  */
+
+//get_header(); 
+$candidate_id = get_the_ID();
+$candidate = get_candidate( $candidate_id );
+$party = get_party_from_candidate( $candidate_id );
+$constituency = get_constituency_from_candidate( $candidate_id );
+$candidate_news = get_news( $candidate['reference_id'] );
  
 get_header(); ?>
- 
-        <div id="primary" class="content-area">
-            <div id="content" class="site-content" role="main">
- 
-            <?php while ( have_posts() ) : the_post(); ?>
- 
-                <?php election_data_theme_content_nav( 'nav-above' ); ?>
- 
-                <?php get_template_part( 'content', 'single' ); ?>
- 
-                <?php election_data_theme_content_nav( 'nav-below' ); ?>
- 
-                <?php
-                    // If comments are open or we have at least one comment, load up the comment template
-                    if ( comments_open() || '0' != get_comments_number() )
-                        comments_template( '', true );
-                ?>
- 
-            <?php endwhile; // end of the loop. ?>
- 
-            </div><!-- #content .site-content -->
-        </div><!-- #primary .content-area -->
- 
+<h2 class="title"><?php echo $candidate['name']; ?></h2>
+<div class="flow_it">
+	<div class="politicians">
+		<?php display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'constituency', 'party' ), 'constituency' ); ?>
+	</div>
+	<div class="three_columns">
+		<h2 id="news">News that mentions <?php echo $candidate['name']; ?></h2>
+		<p class="news-article-notice">Articles are gathered from <a href="http://news.google.ca">Google News</a> by searching for the candidate's full name.</p>
+		<?php display_news_summaries( $candidate['reference_id'], 'Candidate' ); ?>
+	</div>
+</div>
 <?php get_sidebar(); ?>
 <?php get_footer(); ?>

@@ -190,9 +190,9 @@ class Election_Data_News_Article {
 				'filters' => array( 
 					'moderation' => array(
 						'0' => 'All Moderations',
-						'New' => 'New',
-						'Approved' => 'Approved',
-						'Rejected' => 'Rejected',
+						'new' => 'New',
+						'approved' => 'Approved',
+						'rejected' => 'Rejected',
 					),
 				),
 			),
@@ -490,13 +490,15 @@ class Election_Data_News_Article {
 		while ( $query->have_posts() ) {
 			$query->the_post();
 			$article_id = $query->post->ID;
+			if ( $article_id == 15086 ) {
+			}
 			if ( count( wp_get_object_terms( $article_id, $this->taxonomies['reference'] ) ) > 1 ) {
 				$to_be_updated[] = $article_id;
 			}
 		}
 		
 		foreach ( $to_be_updated as $article_id ) {
-			update_post_meta( $article_id, 'moderation', 'Approved' );
+			update_post_meta( $article_id, 'moderation', 'approved' );
 		}
 		
 		if ( $mode == 'ajax' )
