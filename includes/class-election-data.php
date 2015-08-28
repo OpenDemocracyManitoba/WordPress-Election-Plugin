@@ -344,12 +344,17 @@ class Election_Data {
 					$csv = $zip->getStream( "$type.csv" );
 					$success |= $candidate->import_csv( $type, $csv, $mode );
 					fclose( $csv );
+					wp_cache_flush();
+					gc_collect_cycles();
+
 				}
 				
 				foreach( $news_types as $type ) {
 					$csv = $zip->getStream( "$type.csv" );
 					$success |= $news_article->import_csv( $type, $csv, $mode );
 					fclose( $csv );
+					wp_cache_flush();
+					gc_collect_cycles();
 				}
 				$csv = $zip->getStream( 'settings.csv' );
 				$success != self::import_csv( $csv, $mode );
