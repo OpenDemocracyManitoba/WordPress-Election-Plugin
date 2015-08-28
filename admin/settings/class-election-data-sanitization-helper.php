@@ -83,11 +83,9 @@ class Election_Data_Sanitization_Helper {
 		
 		parse_str( $_POST['_wp_http_referer'], $referrer );
 		$tab = isset( $referrer['tab'] ) ? $referrer['tab'] : Election_Data_Settings_Definition::get_default_tab_slug();
-		error_log( print_r( $input, true ) );
 
 		// Tab filter
 		$input = apply_filters( 'election_data_settings_sanitize_' . $tab, $input );
-		error_log( print_r( $input, true ) );
 
 		// Trigger action hook for general settings update for $tab
 		$this->do_settings_on_change_hook( $input, $tab );
@@ -95,7 +93,6 @@ class Election_Data_Sanitization_Helper {
 		$old_values = get_option( 'election_data_settings' );
 		$settings_updated = false;
 		$error_occurred = false;
-		error_log( print_r( $input, true ) );
 		// Loop through each setting being saved and pass it through a sanitization filter
 		foreach ( $input as $key => $value ) {
 			$input[$key] = $this->apply_type_filter( $input, $tab, $key );
@@ -119,8 +116,6 @@ class Election_Data_Sanitization_Helper {
 			}
 		}
 		
-		error_log( print_r( $input, true ) );
-
 		return $this->get_output( $tab, $input );
 	}
 	

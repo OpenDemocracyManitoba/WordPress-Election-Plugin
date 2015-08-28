@@ -469,8 +469,6 @@ class Election_Data_News_Article {
 		}
 		$source_parents = $sources_data['parents'];
 		
-		
-		error_log( "Begin Scraping Articles" );
 		foreach ( $references_by_name as $reference_name => $reference_id ) {
 			$this->process_reference_news_articles( $reference_name, $reference_id, $sources, $auto_publish_sources, $auto_reject_sources, $source_parents );
 		}
@@ -509,20 +507,12 @@ class Election_Data_News_Article {
 	
 	protected function process_reference_news_articles( $reference_name, $reference_id, &$sources, $auto_publish_sources, $auto_reject_sources, $source_parents ) {
 		$format = "%30s: %10s, %10s";
-		error_log( " - - Begin Scraping for $reference_name" );
-		error_log( sprintf( $format, "Reference Start", memory_get_usage( true ), memory_get_usage( false ) ) );
 		$mentions = $this->get_individual_news_articles( $reference_name );
 		$mentions += $this->get_individual_news_articles( $reference_name, Election_Data_Option::get_option( 'location' ) );
-		error_log( sprintf( $format, "Mentions Count", count( $mentions ), 0 ) );
-		//error_log( sprintf( $format, "News Mentions Gathered", memory_get_usage( true ), memory_get_usage( false ) ) );
 		$current_time_zone = new DateTimeZone( get_option( 'timezone_string', 'UTC' ) );
 		foreach ( $mentions as $mention ) {
-			//error_log( sprintf( $format, "Mention Start", memory_get_usage( true ), memory_get_usage( false ) ) );
 			if ( !isset( $sources[$mention['base_url']] ) ) {
-				error_log( 'base_url: ' . print_r( $mention['base_url'], true ) );
-				error_log( 'source: ' . print_r( $mention['source'], true ) );
 				$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source'], array( 'parent' => $source_parents['New'], 'description' => $mention['source'] ) );
-				error_log( 'term: ' . print_r( $term, true ) );
 				$sources[$mention['base_url']] = $term['term_id'];
 				$sources_by_parent['New'][$mention['base_url']] = $term['term_id'];
 				continue;
@@ -537,7 +527,6 @@ class Election_Data_News_Article {
 							
 			$existing_articles = $this->get_articles_by_url( $mention['url'] );
 			if ( $existing_articles ) {
-				//error_log( sprintf( $format, "Existing Articles", memory_get_usage( true ), memory_get_usage( false ) ) );
 				$article_id = $existing_articles[0];
 				$post = get_post( $article_id );
 				
@@ -546,11 +535,9 @@ class Election_Data_News_Article {
 					$summaries[$reference_id] = $mention['summary'];
 					
 					update_post_meta( $article_id, 'summaries', $summaries );
-					//error_log( sprintf( $format, "Updated Summaries", memory_get_usage( true ), memory_get_usage( false ) ) );
 				}
 			}
 			else {
-				//error_log( sprintf( $format, "No Existing Articles", memory_get_usage( true ), memory_get_usage( false ) ) );
 				$post = array(
 					'post_title' => $mention['title'],
 					'post_status' => 'publish',
@@ -564,18 +551,14 @@ class Election_Data_News_Article {
 				update_post_meta( $article_id, 'summaries', $summaries );
 				update_post_meta( $article_id, 'moderation', $mention['moderation'] );
 				wp_set_object_terms( $article_id, $sources[$mention['base_url']], $this->taxonomies['source']);
-				//error_log( sprintf( $format, "Article Created", memory_get_usage( true ), memory_get_usage( false ) ) );
 			}
 		
 			wp_set_object_terms( $article_id, $reference_id, $this->taxonomies['reference'], true );
-			//error_log( sprintf( $format, "Reference Updated", memory_get_usage( true ), memory_get_usage( false ) ) );
 		}
-		//$mentions = null;
-		//error_log( sprintf( $format, "Mentions Deleted", memory_get_usage( true ), memory_get_usage( false ) ) );
+		
+		// Needed to keep from running out of memory.
 		wp_cache_flush();
-		//error_log( sprintf( $format, "After Cache Flush", memory_get_usage( true ), memory_get_usage( false ) ) );
 		gc_collect_cycles();
-		//error_log( sprintf( $format, "After garbage collection", memory_get_usage( true ), memory_get_usage( false ) ) );
 	}
 	
 	/**

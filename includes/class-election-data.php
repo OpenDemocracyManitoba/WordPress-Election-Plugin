@@ -301,10 +301,8 @@ class Election_Data {
 					case 'wordpress':
 						$current_value = get_option( $data['setting_name'], '' );
 						if ( $current_value == $data['value'] || ( 'no_overwrite' == $mode && $current_value ) ) {
-							error_log( "skipping {$data['setting_name']}" );
 							continue;
 						}
-						error_log( "setting {$data['setting_name']}" );
 						update_option( $data['setting_name'], $data['value'] );
 						break;
 				}
@@ -330,15 +328,25 @@ class Election_Data {
 				$success = true;
 				$zip = new ZipArchive();
 				$zip->open( $file_name );
-				$types = array( 'party', 'constituency', 'candidate' );
-				foreach( $types as $type ) {
+				$candidate_types = array( 'party', 'constituency', 'candidate' );
+				$news_types = array( 'news_source', 'news_article', 'news_mention' );
+				$all_types = array_merge( $candidate_types, $news_types );
+				$all_types[] = 'settings';
+				foreach ( $all_types as $type ) {
+					$success &= $zip->locateName( "$type.csv" ) !== false;
+				}
+				if ( ! $success ) {
+					$zip->close();
+					return false;
+				}
+				
+				foreach ( $candidate_types as $type ) {
 					$csv = $zip->getStream( "$type.csv" );
 					$success |= $candidate->import_csv( $type, $csv, $mode );
 					fclose( $csv );
 				}
-
-				$types = array( 'news_source', 'news_article', 'news_mention' );
-				foreach( $types as $type ) {
+				
+				foreach( $news_types as $type ) {
 					$csv = $zip->getStream( "$type.csv" );
 					$success |= $news_article->import_csv( $type, $csv, $mode );
 					fclose( $csv );
@@ -493,11 +501,3 @@ class Election_Data {
 		wp_die();
 	}
 }
-
-
-/*add_filter('found_posts', 'update_found_posts_for_party', 1, 2 );
-function update_found_posts_for_party( $found_posts, $query ) {
-	error_log( "Running the filter" ) ;
-	remove_filter('found_posts', 'update_found_posts_for_party', 1 );
-	return $found_posts;
-}*/

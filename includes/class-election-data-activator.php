@@ -50,7 +50,6 @@ class Election_Data_Activator {
 		$menu_id = self::register_navigation( $news_articles, $search_page->ID );
 		
 		if ( ! self::setup_theme() ) {
-			error_log( 'Warnings' );
 			$warnings = Election_Data_Option::get_option( 'warnings', array() );
 			$warnings[] = __ ( 'Unable to set up the Election Data Theme that is required for the plugin to work properly. Please copy the theme folder in the Election Data plugin to the wordpress theme folder and activate the Election Data Theme.' );
 			Election_Data_Option::update_option ( 'warnings', $warnings);
@@ -115,7 +114,6 @@ class Election_Data_Activator {
 		Election_Data_Option::update_option( 'previous_theme', $current_theme );
 
 		$theme_name = self::copy_theme( 'ElectionData' );
-		error_log( "theme_name: '$theme_name'" );
 		if ( $theme_name === false ) {
 			return false;
 		}
@@ -126,7 +124,6 @@ class Election_Data_Activator {
 			$theme_name = 'ElectionData';
 		}
 		
-		error_log( 'switching theme' );
 		switch_theme( $theme_name );
 		return true;
 	}

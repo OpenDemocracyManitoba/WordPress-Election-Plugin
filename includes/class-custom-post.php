@@ -529,7 +529,6 @@ SQL;
 
 			wp_redirect( add_query_arg( 'ed_message', $result ? 'term-updated' : 'term-error', $location ) );
 			die();
-			error_log( print_r( $_REQUEST, true ) );
 		}
 	}
 	
