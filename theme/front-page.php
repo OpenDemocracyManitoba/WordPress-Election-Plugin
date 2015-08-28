@@ -76,6 +76,6 @@ get_header(); ?>
 				<?php endforeach; ?>
 			</div>
 		</div>
-	<?php endif;
+	<?php endif; ?>
 </div>
-get_footer(); 
+<?php get_footer(); ?>
