@@ -21,7 +21,7 @@ function get_post_id_by_slug( $post_name, $post_type ) {
 							SELECT ID
 							FROM $wpdb->posts
 							WHERE post_name = %s
-							AND post_type= = %s
+							AND post_type = %s
 					", $post_name, $post_type );
   
 	return $wpdb->get_var( $sql );
@@ -877,40 +877,17 @@ class Election_Data_News_Article {
 		}
 		
 		$this->get_updated_references();
-		$current_articles = Post_Import::get_current_posts( $this->post_type );
-		$current_articles['url'] = array();
-		foreach ( $current_articles['post_name'] as $article ) {
-			$url = get_post_meta( $article->ID, 'url', true );
-			$current_articles['url'][$url][] = $article;
-		}
-		$current_candidates = Post_Import::get_current_posts( $this->candidate['post_type'] );
+		//$current_candidates = Post_Import::get_current_posts( $this->candidate['post_type'] );
 		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
 			$data = array_combine( $headings, $data );
-			$articles = array();
-			if ( isset( $current_articles['post_name'][$data['news_article']] ) ) {
-				$articles[] = $current_articles['post_name'][$data['news_article']];
-			} elseif ( isset( $current_articles['url'][$data['news_article']] ) ) {
-				$articles = $current_articles['url'][$data['news_article']];
-			}
-			$references = array();
-			if ( isset( $current_candidates['post_name'][$data['mention']] ) ) {
-				$candidate = $current_candidates['post_name'][$data['mention']];
-				$references[] = get_post_meta( $candidate->ID, 'reference', true );
-			} elseif ( isset( $current_candidates['post_title'][$data['mention']] ) ) {
-				$candidates = $current_candidates['post_title'][$data['mention']];
-				foreach ( $candidates as $candidate ) {
-					$references[] = get_post_meta( $candidate->ID, 'reference', true );
-				}
-			}
-			if ( !empty( $articles ) && !empty( $references ) ) {
-				foreach ( $references as $reference ) {
-					foreach ($articles as $article ) {
-						wp_set_object_terms( $article->ID, (int)$reference, $this->taxonomies['reference'], true );
-						$summaries = get_post_meta( $article->ID, 'summaries', true );
-						$summaries[$reference] = $data['summary'];
-						update_post_meta( $article->ID, 'summaries', $summaries );
-					}
-				}
+			$article_id = get_post_id_by_slug( $data['news_article'], $this->post_type );
+			$candidate_id = get_post_id_by_slug( $data['mention'], $this->candidate['post_type'] );
+			$reference_id = get_post_meta( $candidate_id, 'reference', true );
+			if ( $article_id && $reference_id ) {
+				wp_set_object_terms( $article_id, (int)$reference_id, $this->taxonomies['reference'], true );
+				$summaries = get_post_meta( $article_id, 'summaries', true );
+				$summaries[$reference_id] = $data['summary'];
+				update_post_meta( $article_id, 'summaries', $summaries );
 			}	
 		}
 		return true;
