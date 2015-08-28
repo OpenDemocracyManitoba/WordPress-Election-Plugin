@@ -9,7 +9,7 @@ get_header(); ?>
 	<?php $summary = Election_Data_Option::get_option( 'summary' );
 	if ( $summary ) : ?>
 		<div class="one_column medium_row">
-			<p><?php echo $summary; ?></p>
+			<?php echo $summary; ?>
 		</div>
 	<?php endif;
 	if ( $constituencies ) : ?>
@@ -77,4 +77,5 @@ get_header(); ?>
 			</div>
 		</div>
 	<?php endif;
+</div>
 get_footer(); 

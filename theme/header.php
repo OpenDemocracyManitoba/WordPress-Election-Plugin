@@ -50,11 +50,11 @@ echo ' | ' . sprintf( __( 'Page %s', 'election_data_theme' ), max( $paged, $page
 
 	<div id="container">
 		<header id="masthead" class="site-header" role="banner">
-			<img src="<?php header_image(); ?>" height="<?php echo get_custom_header()->height; ?>" width="<?php echo get_custom_header()->width; ?>" alt="" class="header_image" />
-			<hgroup>
+			<?php if ( get_header_image() ) : ?>
+				<img src="<?php header_image(); ?>" height="<?php echo get_custom_header()->height; ?>" width="<?php echo get_custom_header()->width; ?>" alt="" class="header_image" />
+			<?php endif; ?>
 				<h1 class="site-title"><a href="<?php echo home_url( '/' ); ?>" title="<?php echo esc_attr( get_bloginfo( 'name', 'display' ) ); ?>" rel="home"><?php bloginfo( 'name' ); ?></a></h1>
 				<h2 class="site-description"><?php bloginfo( 'description' ); ?></h2>
-			</hgroup>
 		</header><!-- #masthead .site-header -->
 		<?php wp_nav_menu( array( 'theme_location' => 'header-menu', 'container_class' => 'menu hidden_block_when_mobile', 'menu_class' => '' ) ); ?>
 		<div id="main" role="main">
