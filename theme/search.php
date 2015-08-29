@@ -20,18 +20,23 @@ get_header(); ?>
                 <?php //election_data_theme_content_nav( 'nav-above' ); ?>
  
                 <?php /* Start the Loop */ ?>
-                <?php while ( have_posts() ) : the_post(); ?>
- 
-                    <?php get_template_part( 'content', 'search' ); ?>
- 
-                <?php endwhile; ?>
- 
+				
+				<?php display_search_results( $wp_query ); ?>
+				
                 <?php //election_data_theme_content_nav( 'nav-below' ); ?>
  
             <?php else : ?>
  
-                <?php get_template_part( 'no-results', 'search' ); ?>
- 
+				<article id="post-0" class="post no-results not-found">
+					<header class="entry-header">
+						<h1 class="entry-title"><?php _e( 'Nothing Found', 'election_data_theme' ); ?></h1>
+					</header><!-- .entry-header -->
+				 
+					<div class="entry-content">
+						<p><?php _e( 'Sorry, but nothing matched your search terms. Please try again with some different keywords.', 'election_data_theme' ); ?></p>
+						<?php get_search_form(); ?>
+				   </div><!-- .entry-content -->
+				</article><!-- #post-0 .post .no-results .not-found -->
             <?php endif; ?>
  
             </div><!-- #content .site-content -->

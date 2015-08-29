@@ -208,6 +208,7 @@ class Election_Data {
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
+		$this->loader->add_filter( 'pre_get_posts', $this, 'set_main_query_parameters' );
 
 	}
 
@@ -504,5 +505,17 @@ class Election_Data {
 		$this->candidate->erase_data();
 		$this->news_article->erase_data();
 		wp_die();
+	}
+	
+	public function set_main_query_parameters( $query ) {
+		if ( is_admin() || ! $query->is_main_query() ) {
+			return;
+		}
+		
+		if ( is_search() ) {
+			$query->set( 'orderby', array( 'post_type', 'date' ) );
+			$query->set( 'order', array( 'ASC', 'DESC' ) );
+			$query->set( 'post_type', $this->candidate->post_type );
+		}
 	}
 }

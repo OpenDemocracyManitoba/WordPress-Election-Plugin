@@ -1,7 +1,7 @@
 <?php 
 
-$party_id = get_queried_object()->term_id;
-$party = get_party( $party_id );
+$party = get_party( get_queried_object() );
+$party_id = $party['id'];
 
 $args = array(
 	'post_type' => $candidate_name,

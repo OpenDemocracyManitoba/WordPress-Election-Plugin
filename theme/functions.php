@@ -110,7 +110,7 @@ function news_titles( $article_query, $paging_type, $reference_ids = array(), $p
 			$references = wp_get_post_terms( $article_id, $reference_name );
 			$mentions = array();
 			foreach ( $references as $reference ) :
-				if ( $reference_ids && ! in_array( $reference->term_id, $reference_ids ) ) {
+				if ( ! in_array( $reference->term_id, $reference_ids ) ) {
 					continue;
 				}
 				$reference_id = get_tax_meta( $reference->term_id, 'reference_post_id' );
@@ -194,6 +194,46 @@ function display_news_summaries ( $reference_ids, $type, $count = 20 ) {
 	<?php endif;
 }
 
+function display_news_article( $article, $candidates = false ){
+	$date_format = get_option( 'date_format' );
+	if ( is_array( $candidates ) ) {
+		$summary = $articles['summaries'][$candidate['id']];
+		$mention_data = array();
+		$summaries = array();
+		foreach ( $candidates as $candidate ) {
+			if ( isset( $articles['mentions'][$candidate['id']] ) ) {
+				$mention_data[$candidate['id']] = $articles['mentions'][$candidate['id']];
+			}
+			if ( isset( $articles['summaries'][$candidate['id']] ) ) {
+				$summaries[$candidate['id']] = $articles['summaries'][$candidate['id']];
+			}
+		}
+		
+		if ( $summaries ) {
+			$summary = $summaries[array_rand( $summaries )];
+		} else {
+			$summary = $article['summary'];
+		}
+	} else {
+		$summary = $article['summary'];
+		$mention_data = $candidates ? $article['mentions'] : array();
+	}
+	
+	$mentions = array();
+	foreach ( $mention_data as $mention ) {
+		$mentions[] = "<a href='{$mention['url']}'>{$mention['name']}</a>";
+		}
+	?>
+	<div class="news_article">
+		<h3><a href="<?php echo $article['url']; ?>"><?php echo $article['title'] ?></a></h3>
+		<p class="date"><?php echo get_the_date( $date_format, $article['id'] ); ?></p>
+		<p class="summary"><em><?php echo $article['source_name']; ?></em> - <?php echo $summary ?></p>
+		<?php if ( $mentions ) : ?>
+			<p class="mentions">Mentions: <?php echo implode (', ', $mentions); ?></p>
+		<?php endif; ?>
+	</div>
+<?php }
+
 function display_party( $party ) {
 	?>
 	<div class="party">
@@ -274,8 +314,28 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 	</div>
 <?php }
 
-function display_all_candidates( $candidate_query )
-{
+function display_search_results( $search_query ) {
+	global $candidate_name, $news_article_name;
+	while ( $search_query->have_posts() ) {
+		$search_query->the_post();
+		switch ( $search_query->post->post_type ) {
+			case $candidate_name:
+				$candidate_id = $search_query->post->ID;
+				$candidate = get_candidate( $candidate_id );
+				$constituency = get_constituency_from_candidate( $candidate_id );
+				$party  = get_party_from_candidate( $candidate_id );
+				$candidate_news = get_news( $candidate['reference_id'], 1, 1 );
+				display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'constituency', 'news' ), 'name' );
+				break;
+			case $news_article_name:
+				//$news_article = get_news_article( $search_query->post );
+				//display_news_article( $news_article );
+				break;
+		}
+	}
+}
+
+function display_all_candidates( $candidate_query ) {
 	while ( $candidate_query->have_posts() ) {
 		$candidate_query->the_post();
 		$candidate_id = $candidate_query->post->ID;
@@ -287,8 +347,7 @@ function display_all_candidates( $candidate_query )
 	}
 }
 
-function display_party_candidates( $candidate_query, $party, &$references )
-{
+function display_party_candidates( $candidate_query, $party, &$references ) {
 	while ( $candidate_query->have_posts() ) {
 		$candidate_query->the_post();
 		$candidate_id = $candidate_query->post->ID;

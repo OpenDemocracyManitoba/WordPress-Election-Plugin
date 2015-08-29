@@ -97,23 +97,22 @@ class Election_Data_Public {
 		 */
 
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/election-data-public.js', array( 'jquery' ), $this->version, false );
-
 	}
 }
 
-function get_constituency( $constituency_id, $get_extra_data = true ) {
+function get_constituency( $constituency, $get_extra_data = true ) {
 	global $constituency_name;
-	$all_terms = get_terms( $constituency_name, array( 'include' => $constituency_id, 'hide_empty' => false ) );
-	$constituency_term = $all_terms[0];
+	$constituency = get_term( $constituency, $constituency_name );
+	$constituency_id = $constituency->term_id;
 	$results = array(
-		'id' => $constituency_term->term_id,
-		'name' => $constituency_term->name,
-		'url' => get_term_link( $constituency_term, $constituency_name ),
-		'reference' => get_post_meta( $constituency_term->term_id, 'reference' ),
+		'id' => $constituency_id,
+		'name' => $constituency->name,
+		'url' => get_term_link( $constituency, $constituency_name ),
+		'reference' => get_post_meta( $constituency_id, 'reference' ),
 	);
 	if ( $get_extra_data ) {
-		$results['details'] = get_tax_meta( $constituency_term->term_id, 'details' );
-		$map_image = get_tax_meta( $constituency_term->term_id, 'map' );
+		$results['details'] = get_tax_meta( $constituency_id, 'details' );
+		$map_image = get_tax_meta( $constituency_id, 'map' );
 		$results['map_id'] = $map_image ? $map_image : '';
 		
 		$child_terms = get_terms( $constituency_name, array( 'parent' =>$constituency_id, 'hide_empty' => false ) );
@@ -134,8 +133,7 @@ function get_constituency_from_candidate( $candidate_id ) {
 	global $constituency_name;
 	$all_terms = get_the_terms( $candidate_id, $constituency_name );
 	if ( isset( $all_terms[0] ) ) {
-		$constituency_term = $all_terms[0];
-		return get_constituency( $constituency_term->term_id, false );
+		return get_constituency( $all_terms[0], false );
 	} else {
 		return  array(
 			'id' => 0,
@@ -174,16 +172,17 @@ function get_parties_random() {
 	return $terms;
 }	
 
-function get_party( $party_id, $get_extra_data = true ) {
+function get_party( $party, $get_extra_data = true ) {
 	global $party_name;
-	$all_terms = get_terms( $party_name, array( 'include' => $party_id, 'hide_empty' => false ) );
-	$party_term = $all_terms[0];
+	$party = get_term( $party, $party_name );
+	$party_id = $party->term_id;
 	
 	$results = array(
-		'name' => $party_term->name,
+		'id' => $party_id,
+		'name' => $party->name,
 		'colour' => get_tax_meta( $party_id, 'colour' ),
-		'url' => get_term_link( $party_term, $party_name ),
-		'long_title' => $party_term->description,
+		'url' => get_term_link( $party, $party_name ),
+		'long_title' => $party->description,
 		'reference_id' => get_tax_meta( $party_id, 'reference' ),
 	);
 		
@@ -232,11 +231,10 @@ function get_party_from_candidate( $candidate_id ) {
 	global $party_name;
 	$all_terms = get_the_terms( $candidate_id, $party_name );
 	if ( isset( $all_terms[0] ) ) {
-		$party_term = $all_terms[0];
-		$party_id = $party_term->term_id;
-		return get_party( $party_id, false );
+		return get_party( $all_terms[0], false );
 	} else {
 		return array(
+			'id' => 0,
 			'name' => '',
 			'colour' => '0x000000',
 			'url' => '',
@@ -244,6 +242,40 @@ function get_party_from_candidate( $candidate_id ) {
 			'reference_id' => '',
 		);
 	}
+}
+
+function get_news_article( $news_article_id ) {
+	global $reference_name, $source_name;
+	
+	$results = array(
+		'id' => $news_article_id,
+		'title' => get_the_title( $news_article_id ),
+		'url' => get_post_meta( $news_article_id, 'url', true ),
+		'summaries' => get_post_meta( $news_article_id, 'summaries', true ),
+		'mentions' => array(),
+		'source_name' => '',
+		'summary' => '',
+	);
+	
+	if ( is_array( $results['summaries'] ) && count( $results['summaries'] > 0 ) ) {
+		$results['summary'] = $results['summaries'][array_rand( $results['summaries'] ) ];
+	}
+	
+	$references = get_the_terms( $news_article_id, $reference_name );
+	foreach ( $references as $reference ) {
+		error_log( print_r( $reference, true ) );
+		$candidate_id = get_tax_meta( $reference->term_id, 'reference_post_id' );
+		$results['mentions'][$reference->term_id] = array(
+			'name' => get_the_title( $candidate_id ),
+			'url' => get_permalink( $candidate_id ),
+		);
+	}
+	
+	$source = get_the_terms( $news_article_id, $source_name );
+	if ( isset( $source[0] ) ) {
+		$results['source_name'] = $source[0]->description;
+	}
+	return $results;
 }
 
 function get_candidate( $candidate_id ) {

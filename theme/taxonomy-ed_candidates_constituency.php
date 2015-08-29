@@ -1,7 +1,7 @@
 <?php
 
-$constituency_id = get_queried_object()->term_id; 
-$constituency = get_constituency( $constituency_id );
+$constituency = get_constituency( $party_id = get_queried_object()->term_id );
+$constituency_id = $constituency['id']; 
 
 get_header();?>
 <?php if ( $constituency['children'] ) : ?> 
