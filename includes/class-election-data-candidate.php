@@ -15,12 +15,11 @@ require_once plugin_dir_path( __FILE__ ) . 'class-custom-post.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-post-import.php';
 require_once plugin_dir_path( __FILE__ ) . 'class-post-export.php';
 
-global $candidate_name;
-$candidate_name = 'ed_candidates';
-global $party_name;
-$party_name = "{$candidate_name}_party";
-global $constituency_name;
-$constituency_name = "{$candidate_name}_constituency";
+global $ed_post_types;
+$ed_post_types['candidate'] = 'ed_candidates';
+global $ed_taxonomies;
+$ed_taxonomies['candidate_party'] = "{$ed_post_types['candidate']}_party";
+$ed_taxonomies['candidate_constituency'] = "{$ed_post_types['candidate']}_constituency";
 
 
 /**
@@ -72,14 +71,13 @@ class Election_Data_Candidate {
 	 *
 	 */
 	public function __construct( $define_hooks = true ) {
-		global $candidate_name;
-		global $party_name;
-		global $constituency_name;
+		global $ed_post_types;
+		global $ed_taxonomies;
 		
-		$this->post_type = $candidate_name;
+		$this->post_type = $ed_post_types['candidate'];
 		$this->taxonomies = array(
-			'party' => $party_name,
-			'constituency' => $constituency_name,
+			'party' => $ed_taxonomies['candidate_party'],
+			'constituency' => $ed_taxonomies['candidate_constituency'],
 		);
 		$args = array(
 			'custom_post_args' => array(
@@ -185,8 +183,32 @@ class Election_Data_Candidate {
 						'std' => '',
 						'imported' => true,
 					),
-					'reference' => array(
-						'id' => 'reference',
+					'news_article_candidate_id' => array(
+						'id' => 'news_article_candidate_id',
+						'type' => 'hidden',
+						'std' => '',
+						'imported' => false,
+					),
+					'questionnaire_token' => array(
+						'id' => 'questionnaire_token',
+						'type' => 'text_with_load_value_button',
+						'std' => '',
+						'imported' => true,
+						'desc' => __( 'The token required to edit the questionnaire.' ),
+						'label' => __( 'Questionnaire Token' ),
+						'button_label' => __( 'Generate Token' ),
+						'ajax_callback' => 'ed_questionnaire_random_token',
+					),
+					'questionnaire_sent' => array(
+						'id' => 'questionnaire_sent',
+						'type' => 'checkbox',
+						'std' => false,
+						'desc' => __( 'Indicates that a questionnaire has been sent out. Uncheck to have the candidate included when the questionnaire is next sent out.' ),
+						'label' => __( 'Quesitonnaire Sent' ),
+						'imported' => true,
+					),
+					'questionnaire_candidate_id' => array(
+						'id' => 'questionnaire_reference',
 						'type' => 'hidden',
 						'std' => '',
 						'imported' => false,
@@ -316,7 +338,7 @@ class Election_Data_Candidate {
 						),
 						array(
 							'type' => 'hidden',
-							'id' => 'reference',
+							'id' => 'questionnaire_reference',
 							'std' => '',
 							'imported' => false,
 						),
@@ -358,11 +380,21 @@ class Election_Data_Candidate {
 
 		if ( $define_hooks ) {
 			add_filter( 'pre_get_posts', array( $this, 'set_main_query_parameters' ) );
+			add_action( 'wp_ajax_ed_questionnaire_random_token', array( $this, 'ajax_questionnaire_random_token' ) );
+			add_action( "create_{$this->taxonomies['party']}", array( $this, 'create_party' ), 10, 2 );
+			add_action( "create_{$this->taxonomies['constituency']}", array( $this, 'create_constituency' ), 10, 2 );
+			add_action( "edited_{$this->taxonomies['constituency']}", array( $this, 'edited_constituency' ), 10, 2 );
 		}
 		add_image_size( 'candidate', 9999, 100, false );
+			
 		add_image_size( 'map_thumb', 100, 9999, false );
 		add_image_size( 'map', 598, 9999, false );
 		add_image_size( 'party', 175, 175, false );
+	}
+	
+	public function ajax_questionnaire_random_token() {
+		echo wp_generate_password( 30, false );
+		wp_die();
 	}
 	
 	/**
@@ -399,6 +431,72 @@ class Election_Data_Candidate {
 			$query->set( 'orderby', 'rand' );
 			$query->set( 'nopaging', 'true' );
 		}
+	}
+	
+	public function create_party( $term_id, $tt_id) {
+		$term = get_term( $term_id, $this->taxonomies['party'], 'ARRAY_A' );
+		$this->create_menu_item( __( 'Party' ), $this->taxonomies['party'], $term );
+	}
+	
+	public function create_constituency( $term_id, $tt_id ) {
+		$term = get_term( $term_id, $this->taxonomies['constituency'], 'ARRAY_A' );
+		if ( $term['parent'] == 0 ) {
+			$this->create_menu_item( __( 'Constituency' ), $this->taxonomies['constituency'], $term );
+		}
+	}
+	
+	public function edited_constituency( $term_id, $tt_id ) {
+		$term = get_term( $term_id, $this->taxonomies['constituency'], 'ARRAY_A' );
+		$menu_item_id = $this->get_menu_item( $this->taxonomies['constituency'], $term );
+		if ( $menu_item_id and $term['parent'] != 0 ) {
+			wp_delete_post( $menu_item_id );
+		} else if ( ! $menu_item_id and $term['parent'] == 0 ) {
+			$this->create_menu_item( __( 'Constituency' ), $this->taxonomies['constituency'], $term );
+		}
+	}
+	
+	public function get_menu_item( $taxonomy, $term ) {
+		$menu_name = __( 'Election Data Navigation Menu' );
+		$menu = wp_get_nav_menu_object( $menu_name );
+		if ( $menu ) {
+			$menu_items = wp_get_nav_menu_items( $menu );
+			foreach ( $menu_items as $menu_item ) {
+				error_log( print_r( $menu_item, true ) );
+				if ( 'taxonomy' == $menu_item->type
+					&& $taxonomy == $menu_item->object
+					&& $term['term_id'] == $menu_item->object_id ) {
+					return $menu_item->ID;
+				}
+			}
+		}
+		
+		return 0;
+	}
+	
+	public function create_menu_item( $parent_menu_item_name, $taxonomy, $term ) {
+		$menu_name = __( 'Election Data Navigation Menu' );
+		$menu = wp_get_nav_menu_object( $menu_name );
+		if ( $menu ) {
+			$menu_items = wp_get_nav_menu_items( $menu );
+			foreach ( $menu_items as $menu_item ) {
+				error_log( print_r( $menu_item, true ) );
+				if ( $parent_menu_item_name == $menu_item->title ) {
+					$args = array(
+						'menu-item-title' => $term['name'],
+						'menu-item-parent-id' => $menu_item->ID, 
+						'menu-item-status' => 'publish',
+						'menu-item-object' => $taxonomy,
+						'menu-item-object-id' => $term['term_id'],
+						'menu-item-type' => 'taxonomy'
+						);
+					error_log( print_r( $args, true ) );
+					error_log( print_r( $term, true ) );
+					wp_update_nav_menu_item( $menu->term_id, 0, $args
+					 );
+					break;
+				}
+			}
+		}			
 	}
 	
 	/**
@@ -512,8 +610,8 @@ class Election_Data_Candidate {
 	 */
 	protected function import_party_csv( $csv, $mode ) {
 		$party_fields = array( 'name', 'slug', 'description' );
-		
-		return Post_Import::import_taxonomy_csv( $csv, $mode, 'party', $this->taxonomies['party'], $party_fields, $this->custom_post->taxonomy_meta['party'] );
+		$required_fields = array( 'name', 'description' );
+		return Post_Import::import_taxonomy_csv( $csv, $mode, 'party', $this->taxonomies['party'], $party_fields, $this->custom_post->taxonomy_meta['party'], null, array(), $required_fields );
 	}
 	
 	/**

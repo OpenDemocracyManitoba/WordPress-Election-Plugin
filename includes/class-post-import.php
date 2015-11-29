@@ -18,7 +18,7 @@ class Post_Import {
 		$args = array();
 		$term = null;
 		$name = $data['name'];
-		$slug = $data['slug'];
+		$slug = isset( $data['slug'] ) ? $data['slug'] : '';
 		$description = in_array( 'description', $term_fields ) ? $data['description'] : '';
 		if ( empty( $data[$parent_field] ) ) {
 			$parent = 0;
@@ -261,6 +261,9 @@ class Post_Import {
 				$required_fields[] = $parent_field;
 			}
 		}
+		error_log( print_r ( $headings, true ) );
+		error_log( print_r ( $required_fields, true ) );
+
 		foreach ( $required_fields as $field ) {
 			$found &= in_array( $field, $headings ) || isset( $default_values[$field] );
 		}
@@ -273,7 +276,6 @@ class Post_Import {
 		while ( ( $data = self::read_csv_line( $csv, $headings ) ) !== false ) {
 			$data = self::apply_defaults( $data, $default_values );
 			$term = self::get_or_create_term( $taxonomy_name, $data, $taxonomy_fields, $parent_field, $mode );
-
 			if ( $taxonomy_meta )
 			{
 				$taxonomy_meta->update_field_values( $term['term_id'], $data, $mode );

@@ -403,7 +403,7 @@ class Post_Meta {
 	}
 	
 	/*
-	 * Enqueus the scripts and styles required to edit the custom data.
+	 * Enqueues the scripts and styles required to edit the custom data.
 	 *
 	 * @since 1.0
 	 * @access public
@@ -412,28 +412,47 @@ class Post_Meta {
 	public function enqueue_scripts() {
 		global $current_screen;
 		
-		if ( "edit-{$this->post_type}" == $current_screen->id && !empty( $this->admin_columns ) ) {
-			$script_id = "post-meta-{$this->post_type}";
-			wp_register_script( $script_id, plugin_dir_url( __FILE__ )  . 'js/post-meta.js', array( 'jquery', 'inline-edit-post' ), '', true );
-			$translation_array = array();
-			foreach ( $this->admin_columns as $field => $value ) {
-				$translation_array[$field] = $this->prefix . $this->fields[$field]['id'];
-				
-				if ( 'pulldown' == $this->fields[$field]['type'] ) {
-					$pulldown_array = array();
-					foreach ( $this->fields[$field]['options'] as $value => $label ) {
-						$pulldown_array[$label] = $value;
-					}
+		if ( "edit-{$this->post_type}" == $current_screen->id ) {
+			if ( !empty( $this->admin_columns ) ) {
+				$script_id = "post-meta-{$this->post_type}";
+				wp_register_script( $script_id, plugin_dir_url( __FILE__ )  . 'js/post-meta-admin.js', array( 'jquery', 'inline-edit-post' ), '', true );
+				$translation_array = array();
+				foreach ( $this->admin_columns as $field => $value ) {
+					$translation_array[$field] = $this->prefix . $this->fields[$field]['id'];
 					
-					wp_localize_script( $script_id, "pm_post_meta_pulldown_{$this->fields[$field]['id']}", $pulldown_array );
+					if ( 'pulldown' == $this->fields[$field]['type'] ) {
+						$pulldown_array = array();
+						foreach ( $this->fields[$field]['options'] as $value => $label ) {
+							$pulldown_array[$label] = $value;
+						}
+						
+						wp_localize_script( $script_id, "pm_post_meta_pulldown_{$this->fields[$field]['id']}", $pulldown_array );
+					}
+				}
+				
+				wp_localize_script( $script_id, 'pm_post_meta', $translation_array );
+				
+				wp_enqueue_script( $script_id );
+			}
+		}
+		
+		if ( $current_screen->id == $this->post_type )
+		{
+			$translation_array = array();
+			foreach ( $this->fields as $field ) {
+				if ( $field['type'] == 'text_with_load_value_button' )
+				{
+					$translation_array["{$this->prefix}{$field['id']}"] = $field['ajax_callback'];
 				}
 			}
 			
-			wp_localize_script( $script_id, 'pm_post_meta', $translation_array );
-			
-			wp_enqueue_script( $script_id );
+			if ( $translation_array ) {
+				$script_id = "post-meta-{$this->post_type}-text-load-button";
+				wp_register_script( $script_id, plugin_dir_url( __FILE__ ) . 'js/post-meta-text-load.js', array( 'jquery' ), '', true );
+				wp_localize_script( $script_id, 'pm_load_button_ajax', $translation_array );
+				wp_enqueue_script( $script_id );
+			}
 		}
-
 	}
 	
 	/**
@@ -461,6 +480,24 @@ class Post_Meta {
 	protected function display_quick_label ( $field ) {
 		$label = esc_html( $field['label'] );
 		echo "<label class='alignleft'><span class='title'>$label</span></label>";
+	}
+	
+	protected function show_text_with_load_value_button( $field, $mode, $value ) {
+		switch ( $mode ) {
+			case 'edit':
+				$this->display_edit_label( $field, $mode );
+				$value = esc_attr( $value = $value ? $value : $field['std'] );
+				echo "<td><input type='text' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' size='30' style='width:70%' />";
+				echo "<button id='{$this->prefix}{$field['id']}_button' type='button'>{$field['button_label']}</button>";
+				echo "<br />{$field['desc']}</td>";
+				break;
+			case 'bulk':
+			case 'quick':
+				$value = esc_attr( $field['std'] );
+				$this->display_quick_label ( $field, $mode );
+				echo "<input type='text' name='{$this->prefix}{$field['id']}' value='' />";
+				break;
+		}	
 	}
 	
 	protected function show_pulldown( $field, $mode, $value ) {
@@ -534,16 +571,15 @@ class Post_Meta {
 	}
 	
 	protected function show_hidden( $field, $mode, $value ) {
+	}
+	
+	protected function show_hidden_input( $field, $mode, $value ) {
 		switch ( $mode ) {
 			case 'edit':
 				if ( ! $value ) {
 					$value = esc_attr( $value = $value ? $value : $field['std'] );
 					echo "<td class='hidden'><input type='hidden' name='{$this->prefix}{$field['id']}' id='{$this->prefix}{$field['id']}' value='$value' /></td>";
 				}
-				break;
-			case 'bulk':
-			case 'quick':
-			case 'column':
 				break;
 		}
 	}
@@ -605,44 +641,6 @@ class Post_Meta {
 		}
 	}
 	
-	
-	function admin_posts_filter( $query )
-	{
-		global $pagenow;
-		if ( is_admin() && $pagenow=='edit.php' && !empty($_GET['ADMIN_FILTER_FIELD_NAME']) ) {
-			$query->query_vars['meta_key'] = $_GET['ADMIN_FILTER_FIELD_NAME'];
-			if ( !empty($_GET['ADMIN_FILTER_FIELD_VALUE']))
-				$query->query_vars['meta_value'] = $_GET['ADMIN_FILTER_FIELD_VALUE'];
-		}
-	}
-	
-	function admin_posts_filter_restrict_manage_posts()
-	{
-/*		global $wpdb;
-		$sql = 'SELECT DISTINCT meta_key FROM '.$wpdb->postmeta.' ORDER BY 1';
-		$fields = $wpdb->get_results($sql, ARRAY_N);
-	?>
-	<select name="ADMIN_FILTER_FIELD_NAME">
-	<option value=""><?php _e('Filter By Custom Fields', 'baapf'); ?></option>
-	<?php
-		$current = isset($_GET['ADMIN_FILTER_FIELD_NAME'])? $_GET['ADMIN_FILTER_FIELD_NAME']:'';
-		$current_v = isset($_GET['ADMIN_FILTER_FIELD_VALUE'])? $_GET['ADMIN_FILTER_FIELD_VALUE']:'';
-		foreach ($fields as $field) {
-			if (substr($field[0],0,1) != "_"){
-			printf
-				(
-					'<option value="%s"%s>%s</option>',
-					$field[0],
-					$field[0] == $current? ' selected="selected"':'',
-					$field[0]
-				);
-			}
-		}
-	?>
-	</select> <?php _e('Value:', 'baapf'); ?><input type="TEXT" name="ADMIN_FILTER_FIELD_VALUE" value="<?php echo $current_v; ?>" />
-	<?php*/
-	}
-	
 	public function get_field_names() {
 		$names = array();
 		foreach ( $this->fields as $field ) {
@@ -674,7 +672,7 @@ class Post_Meta {
 	{
 		$meta_values = get_post_meta( $post_id );
 		foreach ( $this->fields as $field ) {
-			if ( $field['imported'] && ( 'overwrite' == $mode || empty( $meta_values[$field['id']] ) ) ) {
+			if ( $field['imported'] && isset( $data[$field['id']] ) && ( 'overwrite' == $mode || empty( $meta_values[$field['id']] ) ) ) {
 				update_post_meta( $post_id, $field['id'], maybe_unserialize( $data[$field['id']] ) );
 			} elseif ( empty( $meta_values[$field['id']] ) ) {
 				update_post_meta( $post_id, $field['id'], $field['std'] );

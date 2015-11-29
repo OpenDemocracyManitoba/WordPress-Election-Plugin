@@ -38,8 +38,13 @@ class Election_Data_Activator {
 		
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-news-article.php';
 		
-		$news_articles = new Election_Data_News_Article( '', '', false );
+		$news_articles = new Election_Data_News_Article( false );
 		$news_articles->initialize();
+
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-answer.php';
+		
+		$answers = new Election_Data_Answer( false );
+		$answers->initialize();
 		
 		flush_rewrite_rules();
 		
@@ -132,6 +137,7 @@ class Election_Data_Activator {
 		$search_pages = get_pages( array( 
 			'meta_key' => '_wp_page_template',
 			'meta_value' => 'searchpage.php',
+			'hierarchical' => 0,
 		) );
 		
 		if ( count( $search_pages ) > 0 ) {
@@ -142,16 +148,17 @@ class Election_Data_Activator {
 			'post_title' => 'Search',
 			'post_status' => 'publish',
 			'post_type' => 'page',
-			'page_template' => 'searchpage.php',
 		);
 		
-		return get_post( wp_insert_post( $search_page ) );
+		$post = get_post( wp_insert_post( $search_page ) );
+		update_post_meta( $post->ID, '_wp_page_template', 'searchpage.php' );
+		return $post;
 	}
 	
 	public static function register_navigation( $news_articles, $seach_page_id ) {
-		$menu_name = 'Election Data Navigation Menu';
-		$menu_id = wp_get_nav_menu_object( $menu_name );
-		if ( ! $menu_id ) {
+		$menu_name = __( 'Election Data Navigation Menu' );
+		$menu = wp_get_nav_menu_object( $menu_name );
+		if ( ! $menu ) {
 			$menu_id = wp_create_nav_menu( $menu_name );
 			wp_update_nav_menu_item( $menu_id, 0, array(
 				'menu-item-title' => __( 'Home' ),
@@ -192,6 +199,8 @@ class Election_Data_Activator {
 				'menu-item-title' => __( 'About' ),
 				'menu-item-status' => 'publish',
 			) );
+		} else {
+			$menu_id = $menu->term_id;
 		}
 		
 		return $menu_id;

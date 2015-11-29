@@ -2,9 +2,11 @@
 
 $party = get_party( get_queried_object() );
 $party_id = $party['id'];
+global $ed_post_types;
+global $ed_taxonomies;
 
 $args = array(
-	'post_type' => $candidate_name,
+	'post_type' => $ed_post_types['candidate'],
 	'meta_query' => array(
 		array(
 			'key' => 'party_leader',
@@ -13,7 +15,7 @@ $args = array(
 	),
 	'tax_query' => array(
 		array(
-			'taxonomy' => $party_name,
+			'taxonomy' => $ed_taxonomies['candidate_party'],
 			'terms' => array( $party_id ),
 			'field' => 'term_id',
 		),

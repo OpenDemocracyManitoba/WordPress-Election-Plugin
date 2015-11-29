@@ -2,7 +2,31 @@ jQuery(document).ready( function($) {
 	$.fn.exists = function () {
 		return this.length !== 0;
 	}
-	$( '#button_scrape_news' ).click( function( event ) {
+	for ( var id in ed_settings_button_actions ) {
+		if ( !ed_settings_button_actions.hasOwnProperty( id ) ) {
+			continue;
+		}
+		var action = ed_settings_button_actions[id];
+		var confirm_message = id in ed_settings_button_messages ? ed_settings_button_messages[id] : '';
+		
+		$( '#' + id ).click( ( function( action, confirm_message ) {
+			return function( event ) {
+				if ( !confirm_message || confirm( confirm_message ) ) {
+					$.ajax( {
+						url: ajaxurl,
+						type: 'POST',
+						async: true,
+						cache: false,
+						data: {
+							action: action
+						}
+					} );
+				}
+			};
+		} )( action, confirm_message ) );
+	}
+	
+	/*$( '#button_scrape_news' ).click( function( event ) {
 		// Perform AJAX call to run the news scraping.
 		$.ajax( {
 			url: ajaxurl, // this is a variable that WordPress has already defined for us
@@ -27,7 +51,7 @@ jQuery(document).ready( function($) {
 				}
 			} );
 		}
-	} );
+	} ); */
 	
 	var media_frames = {};
 	for ( var image in ed_settings_image_data ) {

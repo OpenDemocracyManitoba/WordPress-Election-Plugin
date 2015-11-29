@@ -13,6 +13,26 @@
  * @subpackage Election_Data/includes
  */
 
+ /**
+  * Stores the names of the post_types defined by the Election Data plugin.
+  *
+  * @since 1.0
+  * @var	array	$ed_post_type	Single location storage of the custom post types.
+  *
+  */
+ global $ed_post_types;
+ $ed_post_types = array();
+ 
+ /**
+  * Stores the names of the taxonomies defined by the Election Data plugin.
+  *
+  * @since 1.0
+  * @var	array $taxonomies	Single location storage of the custom taxonomies.
+  *
+  */
+ global $ed_taxonomies;
+ $taxonomies = array();
+ 
 /**
  * The core plugin class.
  *
@@ -60,6 +80,8 @@ class Election_Data {
 	protected $candidate;
 	
 	protected $news_artice;
+	
+	protected $answer;
 		
 	/**
 	 * Define the core functionality of the plugin.
@@ -82,7 +104,9 @@ class Election_Data {
 
 		$this->candidate = new Election_Data_Candidate();
 		
-		$this->news_article = new Election_Data_News_Article( $this->candidate->post_type, $this->candidate->taxonomies['party']);
+		$this->news_article = new Election_Data_News_Article();
+		
+		$this->answer = new Election_Data_Answer();
 	}
 
 	/**
@@ -138,6 +162,8 @@ class Election_Data {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-activator.php';
 		
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-news-article.php';
+
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-election-data-answer.php';
 
 		$this->loader = new Election_Data_Loader();
 
@@ -316,7 +342,8 @@ class Election_Data {
 	public static function import( $file_type, $file_data, $mode ) {
 		set_time_limit( 60 * 60 );
 		$candidate = new Election_Data_Candidate( false );
-		$news_article = new Election_Data_News_Article( $candidate->post_type, $candidate->taxonomies['party'], false );
+		$news_article = new Election_Data_News_Article( false );
+		$answer = new Election_Data_Answer( false );
 		
 		$file_name = $file_data['tmp_name'];
 
@@ -331,7 +358,8 @@ class Election_Data {
 				$zip->open( $file_name );
 				$candidate_types = array( 'party', 'constituency', 'candidate' );
 				$news_types = array( 'news_source', 'news_article', 'news_mention' );
-				$all_types = array_merge( $candidate_types, $news_types );
+				$answer_types = array( 'question', 'answer' );
+				$all_types = array_merge( $candidate_types, $news_types, $answer_types );
 				$all_types[] = 'settings';
 				foreach ( $all_types as $type ) {
 					$success &= $zip->locateName( "$type.csv" ) !== false;
@@ -340,6 +368,7 @@ class Election_Data {
 					$zip->close();
 					return false;
 				}
+				
 				
 				foreach ( $candidate_types as $type ) {
 					$csv = $zip->getStream( "$type.csv" );
@@ -357,6 +386,15 @@ class Election_Data {
 					wp_cache_flush();
 					gc_collect_cycles();
 				}
+				
+				foreach ($answer_types as $type ) {
+					$csv = $zip->getStream( "$type.csv" );
+					$success |= $answer->import_csv( $type, $csv, $mode );
+					fclose ( $csv );
+					wp_cache_flush();
+					fc_collect_cycles();
+				}
+				
 				$csv = $zip->getStream( 'settings.csv' );
 				$success != self::import_csv( $csv, $mode );
 				$zip->close();
@@ -374,6 +412,12 @@ class Election_Data {
 				$type = substr( $file_type, 4 );
 				$csv = fopen( $file_name, 'r' );
 				$success = $news_article->import_csv( $type, $csv, $mode );
+				break;
+			case 'csv_answer':
+			case 'csv_question':
+				$type = substr( $file_type, 4 );
+				$csv = fopen( $file_name, 'r' );
+				$success = $answer->import_csv( $type, $csv, $mode );
 				break;
 			case 'csv_settings':
 				$csv = fopen( $file_name, 'r' );
@@ -423,7 +467,8 @@ class Election_Data {
 	public static function export( $file_type ) {
 		set_time_limit( 60 * 60 );
 		$candidate = new Election_Data_Candidate( false );
-		$news_article = new Election_Data_News_Article( $candidate->post_type, $candidate->taxonomies['party'], false );
+		$news_article = new Election_Data_News_Article( false );
+		$answer = new Election_Data_Answer( false );
 
 		switch ( $file_type ) {
 			case 'xml':
@@ -456,6 +501,12 @@ class Election_Data {
 					$zip->addFile( $csv_file, "$type.csv" );
 					$csv_files[] = $csv_file;
 				}
+				$types = array( 'answer', 'question' );
+				foreach ( $types as $type ) {
+					$csv_file = $answer->export_csv( $type );
+					$zip->addFile( $csv_file, "$type.csv" );
+					$csv_files[] = $csv_file;
+				}
 				$csv_file = self::export_csv();
 				$zip->addFile( $csv_file, 'settings.csv' );
 				$csv_files[] = $csv_file;
@@ -482,6 +533,13 @@ class Election_Data {
 				$file = $news_article->export_csv( $type );
 				$content_type = 'text/csv';
 				$file_name = "$type.csv";
+				break;
+			case 'csv_question':
+			case 'csv_answer':
+				$type = substr( $file_type, 4 );
+				$file = $answer->export_csv( $type );
+				$content_type = 'text/csv';
+				$file_name = "answer_$type";
 				break;
 			case 'csv_settings':
 				$file = self::export_csv();

@@ -43,7 +43,7 @@ add_action( 'after_setup_theme', 'election_data_theme_setup' );
  * @since Election_Data_Theme 1.0
  */
 function election_data_theme_scripts() {
-	global $constituency_name;
+	global $ed_taxonomies;
 		
     wp_enqueue_style( 'style', get_stylesheet_uri() );
 	if ( is_front_page() ) {
@@ -52,7 +52,7 @@ function election_data_theme_scripts() {
 		wp_enqueue_script( 'google', 'https://apis.google.com/js/platform.js' );
 	}
 	
-	if ( is_tax( $constituency_name ) ) {
+	if ( is_tax( $ed_taxonomies['candidate_constituency'] ) ) {
 		wp_enqueue_script( 'jquery-map-highlight', get_template_directory_uri() . '/js/jquery.maphilight.min.js', array( 'jquery' ) );
 		wp_enqueue_script( 'map-highlight', get_template_directory_uri() . '/js/map_highlight.js', array( 'jquery-map-highlight' ) );
 	}
@@ -84,14 +84,13 @@ function election_data_init() {
 add_action( 'init', 'election_data_init' );
 
 function display_news_titles ( $reference_ids = null, $show_more = false, $count = 20, $pagination = false ) {
-	global $source_name, $reference_name, $party_name, $candidate_name, $news_article_name;
 	$news = get_news( $reference_ids, 1, $count );
 	$articles = $news['articles'];
 	news_titles( $articles, $show_more, $reference_ids );
 }
 
 function news_titles( $article_query, $paging_type, $reference_ids = array(), $paging_args = array() ) {
-	global $reference_name, $news_article_name;
+	global $ed_post_types, $ed_taxonomies;
 	$last_date = '';
 	if ( $article_query->have_posts() ) :
 		$date_format = get_option( 'date_format' );
@@ -107,7 +106,7 @@ function news_titles( $article_query, $paging_type, $reference_ids = array(), $p
 				<h4><?php echo $date; ?></h4>
 				<ul class="news">
 			<?php endif;
-			$references = wp_get_post_terms( $article_id, $reference_name );
+			$references = wp_get_post_terms( $article_id, $ed_taxonomies['news_article_candidate'] );
 			$mentions = array();
 			foreach ( $references as $reference ) :
 				if ( ! in_array( $reference->term_id, $reference_ids ) ) {
@@ -127,7 +126,7 @@ function news_titles( $article_query, $paging_type, $reference_ids = array(), $p
 		<?php endwhile; ?>
 		</ul>
 		<?php if ( $paging_type === true ) : ?>
-			<p class="more"><a href="<?php echo get_post_type_archive_link( $news_article_name ); ?>">More News...</a></p>
+			<p class="more"><a href="<?php echo get_post_type_archive_link( $ed_post_types['news_article'] ); ?>">More News...</a></p>
 		<?php elseif ( $paging_type ) :
 			$page = get_current_page( $paging_type );
 			display_news_pagination( get_paging_args( $paging_type, $page ) );
@@ -157,7 +156,7 @@ function display_news_summaries ( $reference_ids, $type, $count = 20 ) {
 	if ( ! is_array( $reference_ids ) ) {
 		$reference_ids = array( $reference_ids );
 	}
-	global $source_name;
+	global $ed_taxonomies;
 	$news = get_news( $reference_ids, $page, $articles_per_page );
 	$articles = $news['articles'];
 
@@ -176,7 +175,7 @@ function display_news_summaries ( $reference_ids, $type, $count = 20 ) {
 					continue;
 				}
 				$summary = $summaries[$reference_id];
-				$sources = wp_get_post_terms( $article->ID, $source_name );
+				$sources = wp_get_post_terms( $article->ID, $ed_taxonomies['news_article_source'] );
 				$source = $sources[0];
 				$source_label = esc_html( $source->description ? $source->description : $source->name ); ?>
 				<div class="news-article">	
@@ -270,6 +269,7 @@ function display_party( $party ) {
 <?php }
 
 function display_candidate( $candidate, $constituency, $party, $news, $show_fields=array(), $incumbent_location='name' ) {
+	error_log( print_r( $candidate, true ) );
 	$display_name = in_array( 'name', $show_fields );
 	$display_party = in_array('party', $show_fields );
 	$display_constituency = in_array( 'constituency', $show_fields );
@@ -315,19 +315,19 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 <?php }
 
 function display_search_results( $search_query ) {
-	global $candidate_name, $news_article_name;
+	global $ed_post_types;
 	while ( $search_query->have_posts() ) {
 		$search_query->the_post();
 		switch ( $search_query->post->post_type ) {
-			case $candidate_name:
+			case $ed_post_types['candidate']:
 				$candidate_id = $search_query->post->ID;
 				$candidate = get_candidate( $candidate_id );
 				$constituency = get_constituency_from_candidate( $candidate_id );
 				$party  = get_party_from_candidate( $candidate_id );
-				$candidate_news = get_news( $candidate['reference_id'], 1, 1 );
+				$candidate_news = get_news( $candidate['news_article_reference_id'], 1, 1 );
 				display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'constituency', 'news' ), 'name' );
 				break;
-			case $news_article_name:
+			case $ed_post_types['news_article']:
 				//$news_article = get_news_article( $search_query->post );
 				//display_news_article( $news_article );
 				break;
@@ -342,7 +342,7 @@ function display_all_candidates( $candidate_query ) {
 		$candidate = get_candidate( $candidate_id );
 		$constituency = get_constituency_from_candidate( $candidate_id );
 		$party  = get_party_from_candidate( $candidate_id );
-		$candidate_news = get_news( $candidate['reference_id'], 1, 1 );
+		$candidate_news = get_news( $candidate['news_article_reference_id'], 1, 1 );
 		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'constituency', 'news' ), 'name' );
 	}
 }
@@ -353,8 +353,8 @@ function display_party_candidates( $candidate_query, $party, &$references ) {
 		$candidate_id = $candidate_query->post->ID;
 		$candidate = get_candidate( $candidate_id );
 		$constituency = get_constituency_from_candidate( $candidate_id );
-		$references[] = $candidate['reference_id'];
-		$candidate_news = get_news( $candidate['reference_id'], 1, 1 ); 
+		$references[] = $candidate['news_article_reference_id'];
+		$candidate_news = get_news( $candidate['news_article_reference_id'], 1, 1 ); 
 		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'constituency', 'news' ), 'constituency' );
 	}
 }
@@ -365,8 +365,8 @@ function display_constituency_candidates( $candidate_query, $constituency, &$ref
 		$candidate_id = $candidate_query->post->ID;
 		$candidate = get_candidate( $candidate_id );
 		$party = get_party_from_candidate( $candidate_id );
-		$references[] = $candidate['reference_id'];
-		$candidate_news = get_news( $candidate['reference_id'], 1, 1 );
+		$references[] = $candidate['news_article_reference_id'];
+		$candidate_news = get_news( $candidate['news_article_reference_id'], 1, 1 );
 		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'news' ), 'name' );
 	}
 }

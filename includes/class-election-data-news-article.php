@@ -28,6 +28,7 @@ function get_post_id_by_slug( $post_name, $post_type ) {
 }
 
 function get_post_ids_by_title( $post_title, $post_type ) {
+	global $wpdb;
 	$sql = $wpdb->prepare( "
 							SELECT ID
 							FROM $wpdb->posts
@@ -37,12 +38,11 @@ function get_post_ids_by_title( $post_title, $post_type ) {
 	return $wpdb->get_col( $sql );
 }
 
-global $news_article_name;
-$news_article_name = 'ed_news_articles';
-global $reference_name;
-$reference_name = "{$news_article_name}_reference";
-global $source_name;
-$source_name = "{$news_article_name}_source";
+global $ed_post_types;
+$ed_post_types['news_article'] = 'ed_news_articles';
+global $ed_taxonomies;
+$ed_taxonomies['news_article_candidate'] = "{$ed_post_types['news_article']}_reference";
+$ed_taxonomies['news_article_source'] = "{$ed_post_types['news_article']}_source";
 
 
 
@@ -88,38 +88,21 @@ class Election_Data_News_Article {
 	public $post_type;
 	
 	/**
-	 * stores the Candidate post type and taxonomy names.
-	 *
-	 * @var array
-	 * @access protected
-	 * @since 1.0
-	 *
-	 */
-	protected $candidate;
-	
-	/**
 	 * Constructor
 	 *
 	 * @access public
 	 * @since 1.0
-	 * @param string $candidate_post_type
-	 * @param string $party_taxonomy_name
 	 * @param boolean $define_hooks
 	 *
 	 */
-	public function __construct( $candidate_post_type, $party_taxonomy_name, $define_hooks = true ) {
-		global $news_article_name;
-		global $reference_name;
-		global $source_name;
+	public function __construct( $define_hooks = true ) {
+		global $ed_post_types;
+		global $ed_taxonomies;
 		
-		$this->candidate = array (
-			'post_type' => $candidate_post_type,
-			'party' => $party_taxonomy_name,
-		);
-		$this->post_type = $news_article_name;
+		$this->post_type = $ed_post_types['news_article'];
 		$this->taxonomies = array( 
-			'reference' => $reference_name,
-			'source' => $source_name,
+			'candidate' => $ed_taxonomies['news_article_candidate'],
+			'source' => $ed_taxonomies['news_article_source'],
 		);
 		$args = array(
 			'custom_post_args' => array(
@@ -134,7 +117,7 @@ class Election_Data_News_Article {
 					'not_found' => __( 'No News Articles found' ),
 					'not_found_in_trash', __( 'No News Articles found in Trash' ),
 				),
-				'description' => __( 'A News article about a candidate or party in the election.' ),
+				'description' => __( 'A News article about a candidate in the election.' ),
 				'public' => true,
 				'menu_position' => 6,
 				'show_ui' => true,
@@ -145,8 +128,8 @@ class Election_Data_News_Article {
 				'query_var' => 'news_article',
 				'rewrite' => array( 'slug' => __( 'news_articles' ), 'with_front' => false ),
 			),
-			'taxonomy_filters' => array( $this->taxonomies['source'], $this->taxonomies['reference'] ),
-			'sortable_taxonomies' => array( $this->taxonomies['source'], $this->taxonomies['reference'] ),
+			'taxonomy_filters' => array( $this->taxonomies['source'], $this->taxonomies['candidate'] ),
+			'sortable_taxonomies' => array( $this->taxonomies['source'], $this->taxonomies['candidate'] ),
 			'custom_post_meta' => array(
 				'meta_box' => array( 
 					'id' => 'election_data_news_article_meta_box',
@@ -167,7 +150,7 @@ class Election_Data_News_Article {
 					'moderation' => array(
 						'label' => __( 'Moderated' ),
 						'id' => 'moderation',
-						'desc' => __( 'Whether the article is to be displaed in the news sections ore not.' ),
+						'desc' => __( 'Whether the article is to be displayed in the news sections ore not.' ),
 						'type' => 'pulldown',
 						'std' => 'new',
 						'imported' => true,
@@ -197,27 +180,27 @@ class Election_Data_News_Article {
 				),
 			),
 			'taxonomy_args' => array(
-				$this->taxonomies['reference'] => array(
+				$this->taxonomies['candidate'] => array(
 					'labels' => array(
-						'name' => _x( 'References', 'taxonomy general name' ),
-						'singular_name' => _x( 'Reference', 'taxonomy general name' ),
-						'all_items' => __( 'All References' ),
-						'edit_item' => __( 'Edit References' ),
-						'view_item' => __( 'View References' ),
-						'update_item' => __( 'Update References' ),
-						'add_new_item' => __( 'Add New Reference' ),
-						'new_item_name' => __( 'New Reference' ),
-						'search_items' => __( 'Search References' ),
+						'name' => _x( 'Candidate References', 'taxonomy general name' ),
+						'singular_name' => _x( 'Candidate Reference', 'taxonomy general name' ),
+						'all_items' => __( 'All Candidate References' ),
+						'edit_item' => __( 'Edit Candidate Reference' ),
+						'view_item' => __( 'View Candidate Reference' ),
+						'update_item' => __( 'Update Candidate Reference' ),
+						'add_new_item' => __( 'Add New Candidate Reference' ),
+						'new_item_name' => __( 'New Candidate Reference' ),
+						'search_items' => __( 'Search Candidate References' ),
 						'parent_item' => null,
 						'parent_item_colon' => null,
 					),
-					'public' => true, //TODO Change back to false
+					'public' => false,
 					'show_tagcloud' => false,
 					'show_admin_column' => true,
 					'show_in_quick_edit' => true,
-					//'meta_box_cb' =>''   //TOOD: Try adding Meta Box Call Back
 					'hierarchical' => true,
-					'query_var' => 'reference',
+					'query_var' => 'news_candidate',
+					'rewrite' => false,
 				),
 				$this->taxonomies['source'] => array(
 					'labels' => array(
@@ -238,22 +221,8 @@ class Election_Data_News_Article {
 					'show_admin_column' => true,
 					'show_ui' => true,
 					'hierarchical' => true,
-					'query_var' => 'source',
-				),
-			),
-			'taxonomy_meta' => array(
-				'reference' => array(
-					'taxonomy' => $this->taxonomies['reference'],
-					'fields' => array(
-						array(
-							'type' => 'hidden',
-							'id' => 'reference_post_id',
-							'std' => '',
-							'label' => __( 'Reference Id' ),
-							'desc' => __( 'The post id for the reference.' ),
-							'imported' => false,
-						),
-					),
+					'query_var' => 'news_source',
+					'rewrite' => false,
 				),
 			),
 		);
@@ -306,69 +275,48 @@ class Election_Data_News_Article {
 	 * @since 1.0
 	 *
 	 */
-	protected function get_updated_references() {
+	protected function get_updated_candidate_terms() {
+		global $ed_post_types;
 		$args = array(
 			'fields' => 'id=>name',
 			'hide_empty' => false,
 			'parent' => 0,
 		);
-		$candidate_reference_names_by_id = get_terms( $this->taxonomies['reference'], $args );
-		$references_by_candidate_id = array();
-		$references_by_name = array();
-		foreach ( $candidate_reference_names_by_id as $id => $name ) {
-			$references_by_candidate_id[get_tax_meta( $id, 'reference_post_id' )] = $id;
-			$references_by_name[$name] = $id;
-		}
-
-		// Get the candidates.
-		$args = array( 
-			'post_type' => $this->candidate['post_type'],
-			'post_status' => 'publish',
-			'nopaging' => true,
-		);
+		$existing_terms = get_terms( $this->taxonomies['candidate'], $args );
 		
-		$reload_candidate_names = false;
+		$args = array(
+			'post_type' => $ed_post_types['candidate'],
+			'nopaging' => true,
+			'post_status' => 'publish',
+		);
 		$query = new WP_Query( $args );
+		$candidates = array();
 		while ( $query->have_posts() ) {
 			$query->the_post();
-			$name = get_the_title();
-			$id = get_the_ID();
-			if ( !isset( $references_by_candidate_id[$id] ) ) {
-				// Add a candidate reference if it doesn't exist.
-				$term = wp_insert_term( $name, $this->taxonomies['reference'], array( 'parent' => 0 ) );
-				update_tax_meta( $term['term_id'], 'reference_post_id', $id );
-				update_post_meta( $id, 'reference', $term['term_id'] );
-				$references_by_name[$name] = $term['term_id'];
-			} elseif ( $candidate_reference_names_by_id[$references_by_candidate_id[$id]] != $name ) {
-				// Update a candidate reference if it exists, but the name has changed.
-				wp_update_term( $references_by_candidate_id[$id], $this->taxonomies['reference'], array( name => $name ) );
-				unset( $candidate_reference_names_by_id[$references_by_candidate_id[$id]] );
-				$reload_candidate_names = true;
-			} else {
-				unset( $candidate_reference_names_by_id[$references_by_candidate_id[$id]] );
+			$candidate_id = $query->post->ID;
+			$name = get_the_title( $query->post );
+			$reference_id = (int) get_post_meta( $candidate_id, 'news_article_reference_id', true );
+			if ( empty( $existing_terms[$reference_id] ) || $name != $existing_terms[$reference_id] ) {
+				$term = get_term_by( 'name', $name, $this->taxonomies['candidate'], ARRAY_A );
+				if ( ! $term ) {
+					$term = wp_insert_term( $name, $this->taxonomies['candidate'] );
+				}
+				$reference_id = (int) $term['term_id'];
+				update_post_meta( $candidate_id, 'news_article_reference_id', $reference_id );
 			}
-		}
-		
-		foreach ( $candidate_reference_names_by_id as $id => $name )
-		{
-			wp_delete_term( $id, $this->taxonomies['reference'] );
-		}
-		
-		if ( $reload_candidate_names )
-		{
-			$args = array(
-				'fields' => 'id=>name',
-				'hide_empty' => false,
-				'parent' => 0,
-			);
-			$candidate_reference_names_by_id = get_terms( $this->taxonomies['reference'], $args );
-			$references_by_name = array();
-			foreach ( $candidate_reference_names_by_id as $id => $name ) {
-				$references_by_name[$name] = $id;
+			if ( isset( $existing_terms[$reference_id] ) && $name == $existing_terms[$reference_id] ) {
+				unset( $existing_terms[$reference_id] );
 			}
+			
+			$candidates[$name] = $reference_id;
+		}
+
+		foreach ( $existing_terms as $id => $name )
+		{
+			wp_delete_term( $id, $this->taxonomies['candidate'] );
 		}
 		
-		return $references_by_name;
+		return $candidates;
 	}
 	
 	/**
@@ -379,28 +327,28 @@ class Election_Data_News_Article {
 	 *
 	 */
 	protected function get_sources() {
-		$parent_ids = $this->custom_post->get_or_create_root_taxonomy_terms( $this->taxonomies['source'], array( 'Automatically Approve', 'Automatically Reject', 'Manually Approve', 'New' ) );
-		
-		$all_sources = array();
-		
-		foreach ( $parent_ids as $parent_name => $parent_id ) {
-			$args = array(
-				'fields' => 'id=>name',
-				'hide_empty' => false,
-				'parent' => $parent_id,
-			);
-			$sources_by_id = get_terms( $this->taxonomies['source'], $args );
-
-			$sources = array();
-			foreach ( $sources_by_id as $id => $name )
-			{
-				$sources[$name] = $id;
-			}
-			
-			$all_sources[$parent_name] = $sources;
+		$parent_terms = $this->custom_post->get_or_create_root_taxonomy_terms( $this->taxonomies['source'], array( 'Automatically Approve', 'Automatically Reject', 'Manually Approve', 'New' ) );
+		$parent_ids = array();
+		foreach ( $parent_terms as $name => $id ) {
+			$parent_ids[$id] = $name;
 		}
 		
-		return array( 'parents' => $parent_ids, 'children' => $all_sources );
+		$args = array(
+			'fields' => 'all',
+			'hide_empty' => false,
+		);
+		$terms = get_terms( $this->taxonomies['source'], $args );
+		$sources = array();
+		foreach ( $terms as $term ) {
+			if ( ! $term->parent ) {
+				continue;
+			}
+			$sources[$term->name] = array( 
+				'id' => (int) $term->term_id,
+				'parent' => $parent_ids[$term->parent],
+			);
+		}
+		return array( 'parents' => $parent_terms, 'sources' => $sources );
 	}
 	
 	/**
@@ -432,6 +380,7 @@ class Election_Data_News_Article {
 		}
 		return $articles;
 	}
+	
 	/**
 	 * Updates the news articles (AJAX version)
 	 *
@@ -441,7 +390,8 @@ class Election_Data_News_Article {
 	 */
 	public function ajax_update_news_articles()
 	{
-		$this->update_news_articles( 'ajax' );
+		$this->update_news_articles();
+		wp_die();
 	}
 		
 	/**
@@ -449,28 +399,17 @@ class Election_Data_News_Article {
 	 *
 	 * @access public
 	 * @since 1.0
-	 * @param string $mode
 	 *
 	 */
-	public function update_news_articles( $mode = 'non-ajax' ) {
-		function sizeofvar($var) {
-			$start_memory = memory_get_usage();
-			$tmp = unserialize(serialize($var));
-			return memory_get_usage() - $start_memory;
-		}
+	public function update_news_articles() {
 		set_time_limit( 0 );
-		$references_by_name = $this->get_updated_references();
-		$sources_data = $this->get_sources();
-		$auto_publish_sources = $sources_data['children']['Automatically Approve'];
-		$auto_reject_sources = $sources_data['children']['Automatically Reject'];
-		$sources = array();
-		foreach ( $sources_data['children'] as $source ) {
-			$sources += $source;
-		}
-		$source_parents = $sources_data['parents'];
+		$candidates = $this->get_updated_candidate_terms();
+		$source_data = $this->get_sources();
+		$sources = $source_data['sources'];
+		$source_parents = $source_data['parents'];
 		
-		foreach ( $references_by_name as $reference_name => $reference_id ) {
-			$this->process_reference_news_articles( $reference_name, $reference_id, $sources, $auto_publish_sources, $auto_reject_sources, $source_parents );
+		foreach ( $candidates as $candidate_name => $candidate_id ) {
+			$this->process_news_articles( $candidate_name, $candidate_id, $sources, $source_parents );
 		}
 		
 		$args = array( 
@@ -490,9 +429,7 @@ class Election_Data_News_Article {
 		while ( $query->have_posts() ) {
 			$query->the_post();
 			$article_id = $query->post->ID;
-			if ( $article_id == 15086 ) {
-			}
-			if ( count( wp_get_object_terms( $article_id, $this->taxonomies['reference'] ) ) > 1 ) {
+			if ( count( wp_get_object_terms( $article_id, $this->taxonomies['candidate'] ) ) > 1 ) {
 				$to_be_updated[] = $article_id;
 			}
 		}
@@ -500,31 +437,18 @@ class Election_Data_News_Article {
 		foreach ( $to_be_updated as $article_id ) {
 			update_post_meta( $article_id, 'moderation', 'approved' );
 		}
-		
-		if ( $mode == 'ajax' )
-		{
-			wp_die();
-		}
 	}
 	
-	protected function process_reference_news_articles( $reference_name, $reference_id, &$sources, $auto_publish_sources, $auto_reject_sources, $source_parents ) {
-		$format = "%30s: %10s, %10s";
-		$mentions = $this->get_individual_news_articles( $reference_name );
-		$mentions += $this->get_individual_news_articles( $reference_name, Election_Data_Option::get_option( 'location' ) );
+	protected function process_news_articles( $reference_name, $reference_id, &$sources, $source_parents ) {
+		$mentions = $this->get_individual_news_articles( $reference_name, Election_Data_Option::get_option( 'location' ) );
 		$current_time_zone = new DateTimeZone( get_option( 'timezone_string', 'UTC' ) );
 		foreach ( $mentions as $mention ) {
-			if ( !isset( $sources[$mention['base_url']] ) ) {
+			if ( ! isset( $sources[$mention['base_url']] ) ) {
 				$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source'], array( 'parent' => $source_parents['New'], 'description' => $mention['source'] ) );
-				$sources[$mention['base_url']] = $term['term_id'];
-				$sources_by_parent['New'][$mention['base_url']] = $term['term_id'];
-				continue;
-			} 
-			if ( isset( $auto_publish_sources[$mention['base_url']] ) ) {
-				$mention['moderation'] = 'approved';
-			} elseif ( isset( $auto_reject_sources[$mention['base_url']] ) ) {
-				$mention['moderation'] = 'rejected';
-			} else {
-				$mention['moderation'] = 'new';
+				$sources[$mention['base_url']] = array(
+					'id' => (int) $term['term_id'],
+					'parent' => 'New',
+				);
 			}
 							
 			$existing_articles = $this->get_articles_by_url( $mention['url'] );
@@ -540,6 +464,19 @@ class Election_Data_News_Article {
 				}
 			}
 			else {
+				switch ( $sources[$mention['base_url']]['parent'] )
+				{
+					case 'Automatically Approve': 
+						$mention['moderation'] = 'approved';
+						break;
+					case 'Automatically Reject':
+						$mention['moderation'] = 'rejected';
+						break;
+					case 'Manually Approve':
+					case 'New':
+						$mention['moderation'] = 'new';
+						break;
+				}
 				$post = array(
 					'post_title' => $mention['title'],
 					'post_status' => 'publish',
@@ -552,10 +489,10 @@ class Election_Data_News_Article {
 				$summaries = array( $reference_id => $mention['summary'] );
 				update_post_meta( $article_id, 'summaries', $summaries );
 				update_post_meta( $article_id, 'moderation', $mention['moderation'] );
-				wp_set_object_terms( $article_id, $sources[$mention['base_url']], $this->taxonomies['source']);
+				wp_set_object_terms( $article_id, $sources[$mention['base_url']]['id'], $this->taxonomies['source']);
 			}
 		
-			wp_set_object_terms( $article_id, $reference_id, $this->taxonomies['reference'], true );
+			wp_set_object_terms( $article_id, $reference_id, $this->taxonomies['candidate'], true );
 		}
 		
 		// Needed to keep from running out of memory.
@@ -788,16 +725,14 @@ class Election_Data_News_Article {
 		$query = new WP_Query( $args );
 		while ( $query->have_posts() ) {
 			$query->the_post();
-			$terms = get_the_terms( $query->post->ID, $this->taxonomies['reference'] );
+			$terms = get_the_terms( $query->post->ID, $this->taxonomies['candidate'] );
 			if (! is_array( $terms ) ) {
 				continue;
 			}
 			$summaries = get_post_meta( $query->post->ID, 'summaries', true );
 			foreach ( $terms as $term ) 
 			{
-				$reference = get_tax_meta( $term->term_id, 'reference_post_id' );
-				$candidate = get_post( $reference );
-				$mention = $candidate->post_name;
+				$mention = $term->name;
 				$summary = $summaries[$term->term_id];
 				$data = array(
 					'news_article' => $query->post->post_name,
@@ -865,6 +800,8 @@ class Election_Data_News_Article {
 	 *
 	 */
 	protected function import_news_mention_csv ($csv, $mode ) {
+		global $ed_post_types;
+		
 		$headings = fgetcsv( $csv );
 		$found = true;
 		$fields = array( 'news_article', 'mention', 'summary' );
@@ -876,17 +813,15 @@ class Election_Data_News_Article {
 			return false;
 		}
 		
-		$this->get_updated_references();
-		//$current_candidates = Post_Import::get_current_posts( $this->candidate['post_type'] );
+		$this->get_updated_candidate_terms();
 		while ( ( $data = fgetcsv( $csv ) ) !== false ) {
 			$data = array_combine( $headings, $data );
 			$article_id = get_post_id_by_slug( $data['news_article'], $this->post_type );
-			$candidate_id = get_post_id_by_slug( $data['mention'], $this->candidate['post_type'] );
-			$reference_id = get_post_meta( $candidate_id, 'reference', true );
-			if ( $article_id && $reference_id ) {
-				wp_set_object_terms( $article_id, (int)$reference_id, $this->taxonomies['reference'], true );
+			$candidate = get_term_by( 'slug', $data['mention'], $this->taxonomies['candidate'] ); 
+			if ( $article_id && $candidate  ) {
+				wp_set_object_terms( $article_id, $candidate->term_id, $this->taxonomies['candidate'], true );
 				$summaries = get_post_meta( $article_id, 'summaries', true );
-				$summaries[$reference_id] = $data['summary'];
+				$summaries[$candidate->term_id] = $data['summary'];
 				update_post_meta( $article_id, 'summaries', $summaries );
 			}	
 		}

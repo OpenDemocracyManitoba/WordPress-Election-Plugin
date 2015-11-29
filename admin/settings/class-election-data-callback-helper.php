@@ -89,6 +89,24 @@ class Election_Data_Callback_Helper {
 		return array( 'ed_settings_image_data' => $translation_array );
 	}
 	
+	public static function localize_button( $element_settings ) {
+		$actions = array();
+		$messages = array();
+		foreach ( $element_settings as $settings ) {
+			$options = $settings[1]['options'];
+			$id = $options['id'];
+			$actions[$id] = $options['action'];
+			if ( array_key_exists( 'message', $options ) ) {
+				$messages[$id] = $options['message'];
+			}
+		}
+		
+		return array(
+			'ed_settings_button_actions' => $actions,
+			'ed_settings_button_messages' => $messages,
+		);
+	}
+	
 	public static function js_dependancies_image() {
 		wp_enqueue_media();
 		

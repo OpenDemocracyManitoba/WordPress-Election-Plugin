@@ -312,41 +312,41 @@ class ED_Custom_Post_Type {
 	public function sort_columns( $columns ) {
 		foreach ( $this->sortable_taxonomies as $taxonomy ) {
 			if ( isset( $this->taxonomy_admin_columns[$taxonomy] ) ) {
-				$columns["taxonomy-$taxonomy"] = "taxonomy-$taxonomy}";
+				$columns["taxonomy-$taxonomy"] = "taxonomy-$taxonomy";
 			}
 		}
 		
 		return $columns;
 	}
-
+	
 	/**
 	 * If the orderby has been set to taxonomy-{taxonomy_name}, 
 	 * update the sql query clauses so that the results are sorted using the name field of the taxonomy.
 	 *
 	 * @since 1.0
-	 * @access protected
+	 * @access public
 	 * @param array $clauses 
 	 * @param object $wp_query
 	 *
 	 */
-	function order_by_taxonomy( $clauses, $wp_query ) {
+	public function order_by_taxonomy( $clauses, $wp_query ) {
 		global $wpdb;
 		if ( isset( $wp_query->query_vars['orderby'] ) ) {
 			foreach ( $this->taxonomy_args as $taxonomy_name => $taxonomy ) {
 				if ( "taxonomy-$taxonomy_name" == $wp_query->query_vars['orderby'] ) {
 					$clauses['join'] .= <<<SQL
 LEFT OUTER JOIN {$wpdb->term_relationships} tr2 ON {$wpdb->posts}.ID=tr2.object_id
-LEFT OUTER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id
+LEFT OUTER JOIN {$wpdb->term_taxonomy} tt2 ON tr2.term_taxonomy_id = tt2.term_taxonomy_id AND (tt2.taxonomy = '$taxonomy_name' OR tt2.taxonomy IS NULL)
 LEFT OUTER JOIN {$wpdb->terms} t2 on tt2.term_id = t2.term_id
 SQL;
 
-					$clauses['where'] .= " AND (tt2.taxonomy = '$taxonomy_name' OR tt2.taxonomy IS NULL)";
 					$clauses['groupby'] = "tr2.object_id";
 					$clauses['orderby']  = "GROUP_CONCAT(t2.name ORDER BY name ASC) ";
 					$clauses['orderby'] .= ( 'ASC' == strtoupper( $wp_query->get( 'order' ) ) ) ? 'ASC' : 'DESC';
 				}
 			}
 		}
+		
 		
 		return $clauses;
 	}

@@ -65,6 +65,7 @@ class Election_Data_Settings_Definition {
 		$tabs['front_page_tab'] = __( 'Front Page', self::$plugin_name );
 		$tabs['news_scraping_tab'] = __( 'News Scraping', self::$plugin_name );
 		$tabs['general_tab'] = __( 'General Settings', self::$plugin_name );
+		$tabs['questions_tab'] = __( 'Question Settings', self::$plugin_name );
 		$tabs['import_tab'] = __( 'Import', self::$plugin_name );
 		$tabs['export_tab'] = __( 'Export', self::$plugin_name );
 		//$tabs['second_tab']  = __( 'Second Tab', self::$plugin_name );
@@ -128,6 +129,8 @@ class Election_Data_Settings_Definition {
 							'csv_news_source' => __( 'CSV file containing news sources', self::$plugin_name ),
 							'csv_news_article' => __( 'CSV file containing news articles', self::$plugin_name ),
 							'csv_news_mention' => __( 'CSV file containing news_mentions', self::$plugin_name ),
+							'csv_question' => __( 'CSV file containing questions for candidates and parties', self::$plugin_name ),
+							'csv_answer' => __( 'CSV file containing the candidate/party answeres to the questions', self::$plugin_name ),
 							'csv_settings' => __( 'CSV file containing site settings', self::$plugin_name ),
 						),
 						'required_modules' => array(
@@ -135,12 +138,12 @@ class Election_Data_Settings_Definition {
 							'csv_zip' => array( 'zip' ),
 						),
 						'skip_if_modules_loaded' => array(
-							'csv_news_source' => array( 'zip' ),
-							'csv_news_article' => array( 'zip' ),
-							'csv_news_mention' => array( 'zip' ),
-							'csv_settings' => array( 'zip' ),
+							//'csv_news_source' => array( 'zip' ),
+							//'csv_news_article' => array( 'zip' ),
+							//'csv_news_mention' => array( 'zip' ),
+							//'csv_settings' => array( 'zip' ),
 						),
-						'default' => 'xml',
+						'default' => 'csv_zip',
 					),
 					'no_value' => true,
 				),
@@ -150,6 +153,8 @@ class Election_Data_Settings_Definition {
 					'options' => array(
 						'id' => 'button_erase_site',
 						'label' => __( 'Erase Site', self::$plugin_name ),
+						'action' => 'election_data_erase_site',
+						'message' => __( 'Are you sure? This will remove all election related data from the site.', self::$plugin_name ),
 					),
 					'no_value' => true,
 				),
@@ -170,6 +175,8 @@ class Election_Data_Settings_Definition {
 							'csv_news_source' => __( 'CSV file containing news sources', self::$plugin_name ),
 							'csv_news_article' => __( 'CSV file containing news articles', self::$plugin_name ),
 							'csv_news_mention' => __( 'CSV file containing news mentions', self::$plugin_name ),
+							'csv_question' => __( 'CSV file containing questions for candidates and parties', self::$plugin_name ),
+							'csv_answer' => __( 'CSV file containing the candidate/party answeres to the questions', self::$plugin_name ),
 							'csv_settings' => __( 'CSV file containing site settings', self::$plugin_name ),
 						),
 						'required_modules' => array(
@@ -177,12 +184,12 @@ class Election_Data_Settings_Definition {
 							'csv_zip' => array( 'zip' ),
 						),
 						'skip_if_modules_loaded' => array(
-							'csv_news_source' => array( 'zip' ),
-							'csv_news_article' => array( 'zip' ),
-							'csv_news_mention' => array( 'zip' ),
-							'csv_settings' => array( 'zip' ),
+							//'csv_news_source' => array( 'zip' ),
+							//'csv_news_article' => array( 'zip' ),
+							//'csv_news_mention' => array( 'zip' ),
+							//'csv_settings' => array( 'zip' ),
 						),
-						'default' => 'xml',
+						'default' => 'csv_Zip',
 					),
 					'no_value' => true,
 				),
@@ -219,6 +226,19 @@ class Election_Data_Settings_Definition {
 					'options' => array(
 						'id' => 'button_scrape_news',
 						'label' => __( 'Scrape News', self::$plugin_name ),
+						'action' => 'election_data_scrape_news',
+					),
+					'no_value' => true,
+				),
+			),
+			'questions_tab' => array(
+				'answers' => array(
+					'desc' => __( 'Create all missing answer posts.', self::$plugin_name ),
+					'type' => 'button',
+					'options' => array(
+						'id' => 'button_create_answers',
+						'label' => __( 'Create Answers', self::$plugin_name ),
+						'action' => 'election_data_create_answers',
 					),
 					'no_value' => true,
 				),
