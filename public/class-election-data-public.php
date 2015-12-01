@@ -51,7 +51,6 @@ class Election_Data_Public {
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
-
 	}
 
 	/**
@@ -74,7 +73,6 @@ class Election_Data_Public {
 		 */
 
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/election-data-public.css', array(), $this->version, 'all' );
-
 	}
 
 	/**
@@ -184,6 +182,7 @@ function get_party( $party, $get_extra_data = true ) {
 	);
 		
 	if ( $get_extra_data ) {
+		$results['answers'] = get_qanda_answers( 'party', $party_id );
 		$party_logo = get_tax_meta( $party_id, 'logo' );
 		$results['logo_id'] = $party_logo ? $party_logo : Election_Data_Option::get_option( 'missing_party' );
 		$results['website'] = get_tax_meta( $party_id, 'website' );
@@ -194,7 +193,9 @@ function get_party( $party, $get_extra_data = true ) {
 		$results['youtube'] = get_tax_meta( $party_id, 'youtube' );
 		$results['twitter'] = get_tax_meta( $party_id, 'twitter' );
 		$results['email'] = get_tax_meta( $party_id, 'email' );
-		foreach ( array('email', 'facebook', 'youtube', 'twitter' ) as $icon_type ) {
+		$results['qanda'] = empty( $results['answers'] ) ? '' : "{$results['url']}#qanda";
+		$results['qanda_token'] = get_tax_meta( $party_id, 'qanda_token' );
+		foreach ( array('email', 'facebook', 'youtube', 'twitter', 'qanda' ) as $icon_type ) {
 			$value = $results[$icon_type];
 			if ( $value ) {
 				switch ( $icon_type ) {
@@ -204,6 +205,7 @@ function get_party( $party, $get_extra_data = true ) {
 					case 'facebook':
 					case 'youtube':
 					case 'twitter':
+					case 'qanda':
 						$url = $value;
 						break;
 					default:
@@ -239,6 +241,16 @@ function get_party_from_candidate( $candidate_id ) {
 	}
 }
 
+function get_candidate_party_from_answer_party( $answer_party ) {
+	$party_id = get_tax_meta( $answer_party->term_id, 'candidate_party_term_id' );
+	return get_party( $party_id, true );
+}
+
+function get_candidate_from_answer_candidate( $answer_candidate ) {
+	$candidate_id = get_tax_meta( $answer_candidate->term_id, 'candidate_id' );
+	return get_candidate( $candidate_id );
+}
+
 function get_news_article( $news_article_id ) {
 	global $ed_taxonomies;
 	
@@ -254,6 +266,8 @@ function get_news_article( $news_article_id ) {
 	
 	if ( is_array( $results['summaries'] ) && count( $results['summaries'] > 0 ) ) {
 		$results['summary'] = $results['summaries'][array_rand( $results['summaries'] ) ];
+	} else {
+		$results['summary'] = '';
 	}
 	
 	$candidates = get_the_terms( $news_article_id, $ed_taxonomies['news_article_candidate'] );
@@ -268,8 +282,98 @@ function get_news_article( $news_article_id ) {
 	$source = get_the_terms( $news_article_id, $ed_taxonomies['news_article_source'] );
 	if ( isset( $source[0] ) ) {
 		$results['source_name'] = $source[0]->description;
+	} else {
+		$results['source_name'] = '';
 	}
 	return $results;
+}
+
+function get_qanda_questions( $type, $term ) {
+	global $ed_post_types;
+	global $ed_taxonomies;
+	$query_args = array(
+		'post_type' => $ed_post_types['answer'],
+		'nopaging' => true,
+		'post_status' => 'publish'
+	);
+	switch ( $type ) {
+		case 'party':
+			$query_args['tax_query'] = array(
+				array(
+					'taxonomy' => $ed_taxonomies['answer_party'],
+					'terms' => $term->term_id,
+				),
+			);
+			break;
+		case 'candidate':
+			$query_args['tax_query'] = array(
+				array(
+					'taxonomy' => $ed_taxonomies['answer_candidate'],
+					'terms' => $term->term_id,
+				),
+			);
+			break;
+	}
+	$questions = array();
+	$query = new WP_Query( $query_args );
+	while ( $query->have_posts() ) {
+		$query->the_post();
+		$post = $query->post;
+		$answer_questions = wp_get_post_terms( $post->ID, $ed_taxonomies['answer_question'] );
+		if ( count( $answer_questions ) != 1 ) {
+			continue;
+		}
+		$question = $answer_questions[0];
+		$questions[$post->ID] = get_tax_meta( $question->term_id, 'question' );
+	}
+
+	return $questions;
+}
+
+function get_qanda_answers( $type, $id ) {
+	global $ed_post_types;
+	global $ed_taxonomies;
+	$query_args = array(
+		'post_type' => $ed_post_types['answer'],
+		'nopaging' => true,
+		'post_status' => 'publish'
+	);
+	switch ( $type ) {
+		case 'party':
+			$query_args['tax_query'] = array(
+				array(
+					'taxonomy' => $ed_taxonomies['answer_party'],
+					'terms' => get_tax_meta( $id, 'qanda_party_id', true ),
+				),
+			);
+			break;
+		case 'candidate':
+			$query_args['tax_query'] = array(
+				array(
+					'taxonomy' => $ed_taxonomies['answer_candidate'],
+					'terms' => get_post_meta( $id, 'qanda_candidate_id', true ),
+				),
+			);
+			break;
+	}
+	$answers = array();
+	$query = new WP_Query( $query_args );
+	while ( $query->have_posts() ) {
+		$query->the_post();
+		$post = $query->post;
+		$answer = apply_filters( 'the_content', get_the_content() );
+		if ( empty( $answer ) ) {
+			continue;
+		}
+		$questions = wp_get_post_terms( $post->ID, $ed_taxonomies['answer_question'] );
+		if ( count( $questions ) != 1 ) {
+			continue;
+		}
+		$question = $questions[0];
+		$answers[get_tax_meta( $question->term_id, 'question' )] = $answer;
+	}
+
+	return $answers;
 }
 
 function get_candidate( $candidate_id ) {
@@ -277,6 +381,7 @@ function get_candidate( $candidate_id ) {
 	$image_id = $image_id ? $image_id : Election_Data_Option::get_option( 'missing_candidate' );
 	
 	$results = array(
+		'id' => $candidate_id,
 		'image_id' => $image_id,
 		'name' => get_the_title( $candidate_id ),
 		'phone' => get_post_meta( $candidate_id, 'phone', true ),
@@ -288,13 +393,14 @@ function get_candidate( $candidate_id ) {
 		'incumbent_year' => get_post_meta( $candidate_id, 'incumbent_year', true ),
 		'party_leader' => get_post_meta( $candidate_id, 'party_leader', true ),
 		'url' => get_permalink( $candidate_id ),
-		'news_article_reference_id' => get_post_meta( $candidate_id, 'news_article_reference_id', true ),
-		'questionnaire_candidate_id' => get_post_meta( $candidate_id, 'questionnaire_candidate_id', true ),
-		'questionnaire_token' => get_post_meta( $candidate_id, 'questionnaire_token', true ),
+		'news_article_candidate_id' => get_post_meta( $candidate_id, 'news_article_candidate_id', true ),
+		'answers' => get_qanda_answers( 'candidate', $candidate_id ),
+		'qanda_token' => get_post_meta( $candidate_id, 'qanda_token', true ),
 	);
+	$results['qanda'] = empty( $results['answers'] ) ? '' : "{$results['url']}#qanda";
 	
 	$icon_data = array();
-	foreach ( array('email', 'facebook', 'youtube', 'twitter' ) as $icon_type ) {
+	foreach ( array('email', 'facebook', 'youtube', 'twitter', 'qanda' ) as $icon_type ) {
 		$value = $results[$icon_type];
 		if ( $value ) {
 			switch ( $icon_type ) {
@@ -304,6 +410,7 @@ function get_candidate( $candidate_id ) {
 				case 'facebook':
 				case 'youtube':
 				case 'twitter':
+				case 'qanda':
 					$url = $value;
 					break;
 				default:
@@ -325,7 +432,8 @@ function get_candidate( $candidate_id ) {
 }
 
 function get_news( $candidate_id = null, $page = 1, $articles_per_page = 20 ) {
-	global $ed_post_types, $ed_taxonomies;
+	global $ed_post_types;
+	global $ed_taxonomies;
 	$args = array(
 		'post_type' => $ed_post_types['news_article'],
 		'post_status' => 'publish',
@@ -340,7 +448,7 @@ function get_news( $candidate_id = null, $page = 1, $articles_per_page = 20 ) {
 		'posts_per_page' => $articles_per_page,
 	);
 	
-	if ( ! empty( $candidate_id ) ) {
+	if ( ! is_null( $candidate_id ) ) {
 		$args['tax_query'] = array(
 			array(
 				'taxonomy' => $ed_taxonomies['news_article_candidate'],
@@ -393,7 +501,7 @@ function get_current_page( $type ) {
 			break;
 	}
 	return $page;
-}	
+}
 
 function get_answer( $answer ) {
 	global $ed_post_types;
@@ -405,7 +513,15 @@ function get_answer( $answer ) {
 	return $result;
 }
 
-function can_edit_answer( $answer = null ) {
-	$answer = $answer ? $answer : get_answer( get_the_ID() );
-	return current_user_can( 'edit_posts' ) || get_query_var( 'token' ) == $answer['token'];
+function can_edit_answers( $type, $id ) {
+	switch ( $type ) {
+		case 'party':
+			$token = get_tax_meta( $id, 'qanda_token' );
+			break;
+		case 'candidate':
+			$token = get_post_meta( $id, 'qanda_token', true );
+			break;
+	}
+
+	return current_user_can( 'edit_posts' ) || get_query_var( 'token' ) == $token && ! empty( $token );
 }

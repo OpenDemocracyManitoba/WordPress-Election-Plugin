@@ -376,7 +376,6 @@ class Election_Data {
 					fclose( $csv );
 					wp_cache_flush();
 					gc_collect_cycles();
-
 				}
 				
 				foreach( $news_types as $type ) {
@@ -392,7 +391,7 @@ class Election_Data {
 					$success |= $answer->import_csv( $type, $csv, $mode );
 					fclose ( $csv );
 					wp_cache_flush();
-					fc_collect_cycles();
+					gc_collect_cycles();
 				}
 				
 				$csv = $zip->getStream( 'settings.csv' );

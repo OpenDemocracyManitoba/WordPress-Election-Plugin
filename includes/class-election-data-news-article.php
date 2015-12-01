@@ -41,7 +41,7 @@ function get_post_ids_by_title( $post_title, $post_type ) {
 global $ed_post_types;
 $ed_post_types['news_article'] = 'ed_news_articles';
 global $ed_taxonomies;
-$ed_taxonomies['news_article_candidate'] = "{$ed_post_types['news_article']}_reference";
+$ed_taxonomies['news_article_candidate'] = "{$ed_post_types['news_article']}_candidate";
 $ed_taxonomies['news_article_source'] = "{$ed_post_types['news_article']}_source";
 
 
@@ -163,7 +163,7 @@ class Election_Data_News_Article {
 					'summaries' => array(
 						'label' => __( 'Summaries' ),
 						'id' => 'summaries',
-						'desc' => __( 'Summary of the news article with the reference highlighted' ),
+						'desc' => __( 'Summaries of the news article with the candidate highlighted' ),
 						'type' => 'text',
 						'std' => array(),
 						'imported' => false,
@@ -182,15 +182,15 @@ class Election_Data_News_Article {
 			'taxonomy_args' => array(
 				$this->taxonomies['candidate'] => array(
 					'labels' => array(
-						'name' => _x( 'Candidate References', 'taxonomy general name' ),
-						'singular_name' => _x( 'Candidate Reference', 'taxonomy general name' ),
-						'all_items' => __( 'All Candidate References' ),
-						'edit_item' => __( 'Edit Candidate Reference' ),
-						'view_item' => __( 'View Candidate Reference' ),
-						'update_item' => __( 'Update Candidate Reference' ),
-						'add_new_item' => __( 'Add New Candidate Reference' ),
-						'new_item_name' => __( 'New Candidate Reference' ),
-						'search_items' => __( 'Search Candidate References' ),
+						'name' => _x( 'Candidates', 'taxonomy general name' ),
+						'singular_name' => _x( 'Candidate', 'taxonomy general name' ),
+						'all_items' => __( 'All Candidates' ),
+						'edit_item' => __( 'Edit Candidate' ),
+						'view_item' => __( 'View Candidate' ),
+						'update_item' => __( 'Update Candidate' ),
+						'add_new_item' => __( 'Add New Candidate' ),
+						'new_item_name' => __( 'New Candidate' ),
+						'search_items' => __( 'Search Candidates' ),
 						'parent_item' => null,
 						'parent_item_colon' => null,
 					),
@@ -268,8 +268,8 @@ class Election_Data_News_Article {
 	}
 	
 	/**
-	 * Updates and returns references to the candidates. If a reference doesn't exists, it is created.
-	 * References to candidates that no longer exist are removed.
+	 * Updates and returns the candidate terms. If a term doesn't exists, it is created.
+	 * Terms for candidates that no longer exist are removed.
 	 *
 	 * @access protected
 	 * @since 1.0
@@ -295,20 +295,20 @@ class Election_Data_News_Article {
 			$query->the_post();
 			$candidate_id = $query->post->ID;
 			$name = get_the_title( $query->post );
-			$reference_id = (int) get_post_meta( $candidate_id, 'news_article_reference_id', true );
-			if ( empty( $existing_terms[$reference_id] ) || $name != $existing_terms[$reference_id] ) {
+			$news_article_candidate_id = (int) get_post_meta( $candidate_id, 'news_article_candidate_id', true );
+			if ( empty( $existing_terms[$news_article_candidate_id] ) || $name != $existing_terms[$news_article_candidate_id] ) {
 				$term = get_term_by( 'name', $name, $this->taxonomies['candidate'], ARRAY_A );
 				if ( ! $term ) {
 					$term = wp_insert_term( $name, $this->taxonomies['candidate'] );
 				}
-				$reference_id = (int) $term['term_id'];
-				update_post_meta( $candidate_id, 'news_article_reference_id', $reference_id );
+				$news_article_candidate_id = (int) $term['term_id'];
+				update_post_meta( $candidate_id, 'news_article_candidate_id', $news_article_candidate_id );
 			}
-			if ( isset( $existing_terms[$reference_id] ) && $name == $existing_terms[$reference_id] ) {
-				unset( $existing_terms[$reference_id] );
+			if ( isset( $existing_terms[$news_article_candidate_id] ) && $name == $existing_terms[$news_article_candidate_id] ) {
+				unset( $existing_terms[$news_article_candidate_id] );
 			}
 			
-			$candidates[$name] = $reference_id;
+			$candidates[$name] = $news_article_candidate_id;
 		}
 
 		foreach ( $existing_terms as $id => $name )
@@ -439,8 +439,8 @@ class Election_Data_News_Article {
 		}
 	}
 	
-	protected function process_news_articles( $reference_name, $reference_id, &$sources, $source_parents ) {
-		$mentions = $this->get_individual_news_articles( $reference_name, Election_Data_Option::get_option( 'location' ) );
+	protected function process_news_articles( $candidate_name, $candidate_id, &$sources, $source_parents ) {
+		$mentions = $this->get_individual_news_articles( $candidate_name, Election_Data_Option::get_option( 'location' ) );
 		$current_time_zone = new DateTimeZone( get_option( 'timezone_string', 'UTC' ) );
 		foreach ( $mentions as $mention ) {
 			if ( ! isset( $sources[$mention['base_url']] ) ) {
@@ -457,8 +457,8 @@ class Election_Data_News_Article {
 				$post = get_post( $article_id );
 				
 				$summaries = get_post_meta( $article_id, 'summaries', true );
-				if ( empty( $summaries[$reference_id] ) ) {
-					$summaries[$reference_id] = $mention['summary'];
+				if ( empty( $summaries[$candidate_id] ) ) {
+					$summaries[$candidate_id] = $mention['summary'];
 					
 					update_post_meta( $article_id, 'summaries', $summaries );
 				}
@@ -486,13 +486,13 @@ class Election_Data_News_Article {
 				);
 				$article_id = wp_insert_post( $post );
 				update_post_meta( $article_id, 'url', $mention['url'] );
-				$summaries = array( $reference_id => $mention['summary'] );
+				$summaries = array( $candidate_id => $mention['summary'] );
 				update_post_meta( $article_id, 'summaries', $summaries );
 				update_post_meta( $article_id, 'moderation', $mention['moderation'] );
 				wp_set_object_terms( $article_id, $sources[$mention['base_url']]['id'], $this->taxonomies['source']);
 			}
 		
-			wp_set_object_terms( $article_id, $reference_id, $this->taxonomies['candidate'], true );
+			wp_set_object_terms( $article_id, $candidate_id, $this->taxonomies['candidate'], true );
 		}
 		
 		// Needed to keep from running out of memory.
@@ -666,7 +666,6 @@ class Election_Data_News_Article {
 	 */
 	public function export_xml( $xml ) {
 	}
-
 	
 	/**
 	 * Exports the news articles to a csv file.
@@ -685,7 +684,6 @@ class Election_Data_News_Article {
 		);
 		
 		$taxonomies = array( $this->taxonomies['source'] => 'source' );
-		
 		Post_Export::export_post_csv( $csv, $this->post_type, $this->custom_post->post_meta, $post_fields, '', $taxonomies );
 	}
 	
@@ -860,7 +858,7 @@ class Election_Data_News_Article {
 	}
 	
 	/**
-	 * Erases all news articles, news sources and references from the database.
+	 * Erases all news articles, news sources and candidate terms from the database.
 	 * @access public
 	 * @since 1.0
 	 *

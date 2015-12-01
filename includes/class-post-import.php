@@ -261,8 +261,6 @@ class Post_Import {
 				$required_fields[] = $parent_field;
 			}
 		}
-		error_log( print_r ( $headings, true ) );
-		error_log( print_r ( $required_fields, true ) );
 
 		foreach ( $required_fields as $field ) {
 			$found &= in_array( $field, $headings ) || isset( $default_values[$field] );

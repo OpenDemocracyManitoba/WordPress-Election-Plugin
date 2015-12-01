@@ -1,7 +1,7 @@
 <?php
 
 /**
- * The file that defines the questionnaire custom post type.
+ * The file that defines the questionnaire custom post type and taxonomies.
  *
  *
  * @link       http://opendemocracymanitoba.ca/
@@ -152,7 +152,7 @@ class Election_Data_Answer {
 					'show_admin_column' => true,
 					'hierarchical' => true,
 					'query_var' => false,
-					'rewrite' => false,
+					'rewrite' => array( 'slug' => 'candidate_qanda', 'with_front' => false ),
 				),
 				$this->taxonomies['party'] => array(
 					'labels' => array(
@@ -173,7 +173,7 @@ class Election_Data_Answer {
 					'show_admin_column' => true,
 					'hierarchical' => true,
 					'query_var' => false,
-					'rewrite' => false
+					'rewrite' => array( 'slug' => 'party_qanda', 'with_front' => false ),
 				),
 			),
 			'taxonomy_meta' => array(
@@ -195,7 +195,7 @@ class Election_Data_Answer {
 					'fields' => array(
 						array(
 							'type' => 'hidden',
-							'id' => 'reference_post_id',
+							'id' => 'candidate_party_term_id',
 							'std' => '',
 							'label' => __( 'Party Id' ),
 							'desc' => __( 'The taxonomy id for the party.' ),
@@ -291,19 +291,19 @@ class Election_Data_Answer {
 			$constituency = isset( $constituencies[0] ) ? " ({$constituencies[0]->name})": '';
 			$party = isset( $parties[0] ) ? " {$parties[0]->name}" : '';
 			$name = get_the_title( $post ) . "{$constituency}{$party}";
-			$reference_id = (int) get_post_meta( $post->ID, 'questionnaire_reference', true );
-			if ( empty( $reference_id ) || !isset( $existing_terms[$reference_id] ) ) {
+			$candidate_id = (int) get_post_meta( $post->ID, 'qanda_candidate_id', true );
+			if ( empty( $candidate_id ) || !isset( $existing_terms[$candidate_id] ) ) {
 				$term = wp_insert_term( $name, $this->taxonomies['candidate'] );
 				
 				update_tax_meta( $term['term_id'], 'candidate_id', $post->ID );
-				update_post_meta( $post->ID, 'questionnaire_reference', $term['term_id'] );
+				update_post_meta( $post->ID, 'qanda_candidate_id', $term['term_id'] );
 				$candidate_terms[$term['term_id']] = $name;
 			} else {
-				if ( $name != $existing_terms[$reference_id] ) {
-					wp_update_term( $reference_id, $this->taxonomies['candidate'], array( 'name' => $name ) );
+				if ( $name != $existing_terms[$candidate_id] ) {
+					wp_update_term( $candidate_id, $this->taxonomies['candidate'], array( 'name' => $name ) );
 				}
-				$candidate_terms[$reference_id] = $name;
-				unset ( $existing_terms[$reference_id] );
+				$candidate_terms[$candidate_id] = $name;
+				unset ( $existing_terms[$candidate_id] );
 			}
 		}
 
@@ -337,18 +337,18 @@ class Election_Data_Answer {
 		$party_terms = array();
 
 		foreach ( $candidate_party_terms as $party_id => $party_name ) {
-			$reference_id = (int) get_tax_meta( $party_id, 'questionnaire_reference' );
-			if ( empty( $reference_id ) ) {
+			$qanda_party_id = (int) get_tax_meta( $party_id, 'qanda_party_id' );
+			if ( empty( $qanda_party_id ) ) {
 				$term = wp_insert_term( $party_name, $this->taxonomies['party'] );
-				update_tax_meta( $term['term_id'], 'candidate_id', $party_id );
-				update_tax_meta( $party_id, 'questionnaire_reference', $term['term_id'] );
+				update_tax_meta( $term['term_id'], 'candidate_party_term_id', $party_id );
+				update_tax_meta( $party_id, 'qanda_party_id', $term['term_id'] );
 				$party_terms[$term['term_id']] = $party_name;
 			} else {
-				if ( $party_name != $existing_terms[$reference_id] ) {
-					wp_update_term( $reference_id, $this->taxonomies['party'], array( 'name' => $party_name ) );
+				if ( $party_name != $existing_terms[$qanda_party_id] ) {
+					wp_update_term( $qanda_party_id, $this->taxonomies['party'], array( 'name' => $party_name ) );
 				}
-				$party_terms[$reference_id] = $party_name;
-				unset ( $existing_terms[$reference_id] );
+				$party_terms[$qanda_party_id] = $party_name;
+				unset ( $existing_terms[$qanda_party_id] );
 			}
 		}
 		
@@ -369,7 +369,6 @@ class Election_Data_Answer {
 	 */
 	public function ajax_create_answers()
 	{
-		error_log( "Creating Answers" );
 		$this->create_answers();
 		wp_die();
 	}
@@ -391,18 +390,14 @@ class Election_Data_Answer {
 		$candidates = $this->get_candidate_taxonomy_terms();
 		$parties = $this->get_party_taxonomy_terms();
 		
-		error_log( 'Questions: ' . print_r( $questions, true ) );
-		error_log( 'Parties: ' . print_r( $parties, true ) );
-		error_log( 'Candidates: ' . print_r( $candidates, true ) );
 		foreach ( $questions as $question_id => $question_name ) {
 			$is_party = get_tax_meta( $question_id, 'party' );
 			$term_ids = $is_party ? $parties : $candidates;
 			$taxonomy = $this->taxonomies[$is_party ? 'party' : 'candidate'];
-			error_log( "Question: $question_name, is_party: $is_party, taxonomy: $taxonomy" );
 			foreach ( $term_ids as $term_id => $term_name ) {
 				$args = array(
 					'post_type' => $this->post_type,
-					'post_status' => 'publish',
+					'post_status' => array( 'publish', 'trash' ),
 					'posts_per_page' => 1,
 					'tax_query' => array(
 						'relation' => 'AND',
@@ -419,7 +414,6 @@ class Election_Data_Answer {
 					),
 				);
 				$query = new WP_Query( $args );
-				error_log( print_r( $query->found_posts, true ) ); 
 				if ( 0 == $query->found_posts ) {
 					$answer = array(
 						'post_title' => "$question_name: $term_name",
@@ -517,8 +511,6 @@ class Election_Data_Answer {
 		foreach ( $required_fields as $field ) {
 			$found &= in_array( $field, $headings );
 		}
-		error_log( print_r( $headings, true ) );
-		error_log( print_r( $required_fields, true ) );
 		if ( !$found ) {
 			return false;
 		}
@@ -532,7 +524,7 @@ class Election_Data_Answer {
 			$candidate_party_term = $this->get_term_by_slug_or_name( $data['party'], $ed_taxonomies['candidate_party'] );
 			if ( $is_party ) {
 				$title = $candidate_party_term->name;
-				$terms[$this->taxonomies['party']] = get_term( get_tax_meta( $candidate_party_term->term_id, 'questionnaire_reference' ), $this->taxonomies['party'] );
+				$terms[$this->taxonomies['party']] = get_term( get_tax_meta( $candidate_party_term->term_id, 'qanda_party_id' ), $this->taxonomies['party'] );
 			} else {
 				$taxonomy_query = array( 'relation' => 'AND' );
 				if ( ! empty( $candidate_party_term ) ) {
@@ -566,7 +558,7 @@ class Election_Data_Answer {
 					return false;
 				}
 				$query->the_post();
-				$candidate=get_term( get_post_meta( $query->post->ID, 'questionnaire_reference', true ), $this->taxonomies['candidate'] );
+				$candidate=get_term( get_post_meta( $query->post->ID, 'qanda_candidate_id', true ), $this->taxonomies['candidate'] );
 				$terms[$this->taxonomies['candidate']] = $candidate;
 				$title = "{$candidate->name}";
 			}

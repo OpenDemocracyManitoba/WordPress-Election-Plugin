@@ -189,26 +189,26 @@ class Election_Data_Candidate {
 						'std' => '',
 						'imported' => false,
 					),
-					'questionnaire_token' => array(
-						'id' => 'questionnaire_token',
+					'qanda_token' => array(
+						'id' => 'qanda_token',
 						'type' => 'text_with_load_value_button',
 						'std' => '',
 						'imported' => true,
 						'desc' => __( 'The token required to edit the questionnaire.' ),
 						'label' => __( 'Questionnaire Token' ),
 						'button_label' => __( 'Generate Token' ),
-						'ajax_callback' => 'ed_questionnaire_random_token',
+						'ajax_callback' => 'ed_qanda_random_token',
 					),
-					'questionnaire_sent' => array(
-						'id' => 'questionnaire_sent',
+					'qanda_sent' => array(
+						'id' => 'qanda_sent',
 						'type' => 'checkbox',
 						'std' => false,
 						'desc' => __( 'Indicates that a questionnaire has been sent out. Uncheck to have the candidate included when the questionnaire is next sent out.' ),
 						'label' => __( 'Quesitonnaire Sent' ),
 						'imported' => true,
 					),
-					'questionnaire_candidate_id' => array(
-						'id' => 'questionnaire_reference',
+					'qanda_candidate_id' => array(
+						'id' => 'qanda_candidate_id',
 						'type' => 'hidden',
 						'std' => '',
 						'imported' => false,
@@ -337,8 +337,26 @@ class Election_Data_Candidate {
 							'imported' => true,
 						),
 						array(
+							'id' => 'qanda_token',
+							'type' => 'text_with_load_value_button',
+							'std' => '',
+							'imported' => true,
+							'desc' => __( 'The token required to edit the questionnaire.' ),
+							'label' => __( 'Questionnaire Token' ),
+							'button_label' => __( 'Generate Token' ),
+							'ajax_callback' => 'ed_qanda_random_token',
+						),
+						array(
+							'id' => 'qanda_sent',
+							'type' => 'checkbox',
+							'std' => false,
+							'desc' => __( 'Indicates that a questionnaire has been sent out. Uncheck to have the party included when the questionnaire is next sent out.' ),
+							'label' => __( 'Quesitonnaire Sent' ),
+							'imported' => true,
+						),
+						array(
 							'type' => 'hidden',
-							'id' => 'questionnaire_reference',
+							'id' => 'qanda_party_id',
 							'std' => '',
 							'imported' => false,
 						),
@@ -380,7 +398,7 @@ class Election_Data_Candidate {
 
 		if ( $define_hooks ) {
 			add_filter( 'pre_get_posts', array( $this, 'set_main_query_parameters' ) );
-			add_action( 'wp_ajax_ed_questionnaire_random_token', array( $this, 'ajax_questionnaire_random_token' ) );
+			add_action( 'wp_ajax_ed_qanda_random_token', array( $this, 'ajax_qanda_random_token' ) );
 			add_action( "create_{$this->taxonomies['party']}", array( $this, 'create_party' ), 10, 2 );
 			add_action( "create_{$this->taxonomies['constituency']}", array( $this, 'create_constituency' ), 10, 2 );
 			add_action( "edited_{$this->taxonomies['constituency']}", array( $this, 'edited_constituency' ), 10, 2 );
@@ -392,8 +410,12 @@ class Election_Data_Candidate {
 		add_image_size( 'party', 175, 175, false );
 	}
 	
-	public function ajax_questionnaire_random_token() {
-		echo wp_generate_password( 30, false );
+	public function qanda_random_token() {
+		return wp_generate_password( 30, false );
+	}
+	
+	public function ajax_qanda_random_token() {
+		echo $this->qanda_random_token();
 		wp_die();
 	}
 	
@@ -461,7 +483,6 @@ class Election_Data_Candidate {
 		if ( $menu ) {
 			$menu_items = wp_get_nav_menu_items( $menu );
 			foreach ( $menu_items as $menu_item ) {
-				error_log( print_r( $menu_item, true ) );
 				if ( 'taxonomy' == $menu_item->type
 					&& $taxonomy == $menu_item->object
 					&& $term['term_id'] == $menu_item->object_id ) {
@@ -479,7 +500,6 @@ class Election_Data_Candidate {
 		if ( $menu ) {
 			$menu_items = wp_get_nav_menu_items( $menu );
 			foreach ( $menu_items as $menu_item ) {
-				error_log( print_r( $menu_item, true ) );
 				if ( $parent_menu_item_name == $menu_item->title ) {
 					$args = array(
 						'menu-item-title' => $term['name'],
@@ -489,8 +509,6 @@ class Election_Data_Candidate {
 						'menu-item-object-id' => $term['term_id'],
 						'menu-item-type' => 'taxonomy'
 						);
-					error_log( print_r( $args, true ) );
-					error_log( print_r( $term, true ) );
 					wp_update_nav_menu_item( $menu->term_id, 0, $args
 					 );
 					break;

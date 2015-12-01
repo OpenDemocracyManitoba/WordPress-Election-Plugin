@@ -95,6 +95,18 @@ class Tax_Meta {
 				wp_enqueue_script( $script_id );
 				wp_enqueue_media();
 			}
+			if ( $this->has_type( 'text_with_load_value_button' ) ) {
+				$script_id = "tax-meta-load_button-$taxonomy";
+				wp_register_script( $script_id, plugin_dir_url( __FILE__ ) . 'js/tax-meta-text-load.js', array( 'jquery', ), '', true );
+				$translation_array = array();
+				foreach ( $this->fields as $field ) {
+					if ( $field['type'] == 'text_with_load_value_button' ) {
+						$translation_array["{$this->prefix}{$field['id']}"] = $field['ajax_callback'];
+					}
+				}
+				wp_localize_script( $script_id, 'tm_load_button_ajax', $translation_array );
+				wp_enqueue_script( $script_id );
+			}
 		}
 	}
 	
@@ -185,7 +197,26 @@ class Tax_Meta {
 		echo "<br><input type='button' id='{$id}_del' name='{$id}_del' value='Remove Image' $del_class/>";
 		echo "<p>$desc</p>$footer";
 	}
+
 	
+	protected function show_text_with_load_value_button( $field, $mode, $value ) {
+		if ( $mode == 'edit' ) {
+			$header = '<td>';
+			$footer = '</td></tr>';
+			echo '<tr class="form-field">';
+		} else {
+			$header = '<div class="form-field">';
+			$footer = '</div>';
+			$value = $field['std'];
+		}
+		$id = esc_attr( "{$this->prefix}{$field['id']}" );
+		$value = esc_attr( $value );
+		$this->display_field_label( $field, $mode );
+		$desc = esc_html( $field['desc'] );
+		echo "$header<input type='text' id='$id' name='$id' value='$value'/>";
+		echo "<button id='{$id}_button' type='button'>{$field['button_label']}</button>";
+		echo "<p>$desc</p>$footer";
+	}	
 	protected function show_checkbox( $field, $mode, $value ) {
 		if ( $mode == 'edit' ) {
 			$header = '<td>';
@@ -272,6 +303,7 @@ class Tax_Meta {
 			case 'hidden':
 			case 'image':
 			case 'wysiwyg':
+			case 'text_with_load_value_button':
 			case 'hidden_input':
 				if ( isset( $_POST[$field_id] ) ) {
 					return stripslashes( $_POST[$field_id] );

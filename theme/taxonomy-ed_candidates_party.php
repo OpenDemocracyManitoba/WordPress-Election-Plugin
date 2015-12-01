@@ -25,9 +25,10 @@ $args = array(
 );
 
 $leader_query = new WP_Query( $args );
-$leader_references = array();
+$leaders = array();
+$candidates = array();
+$has_qanda = count( $party['answers'] ) > 0;
 
-$candidate_references = array();
 
 get_header(); ?>
 <h2 class="title"><?php echo $party['long_title']; ?></h2>
@@ -39,26 +40,35 @@ get_header(); ?>
 			</div>
 			<?php if ( $leader_query->post_count > 0 ) : ?>
 				<div class="politicians">
-					<?php display_party_candidates( $leader_query, $party, $leader_references ); ?>
+					<?php display_party_candidates( $leader_query, $party, $leaders ); ?>
 				</div>
 			<?php endif; ?>
 		</div>
 		<h3>The <?php echo $wp_query->post_count; ?> Candidates</h3>
 		<p class="small grey" >Candidates are displayed alphabetically by constituency.</p>
 		<div class="flow_it unshuffled_politicians">
-			<?php display_party_candidates( $wp_query, $party, $candidate_references ); ?>
+			<?php display_party_candidates( $wp_query, $party, $candidates ); ?>
 		</div>
 	</div>
+	<?php if ( $has_qanda ) : ?>
+	<div class="one_column questionnaire">
+		<h2 id="qanda">Questionnaire Response</h2>
+		<?php foreach ( $party['answers'] as $question => $answer ) : ?>
+			<p><strong><?php echo $question; ?></strong></p>
+			<p><?php echo $answer; ?></p>
+		<?php endforeach; ?>
+	</div>
+	<?php endif; ?>
 	<div class="one_column latest_news_small row_height_medium">
 		<h2>Latest <?php echo $party['name']; ?> party news</h2>
 		<p class="grey small">Recent articles that mention candidates from this party.</p>
-		<?php display_news_titles( $candidate_references ); ?>
+		<?php display_news_titles( $candidates ); ?>
 	</div>
 	<?php if ( $leader_query->post_count > 0 ) : ?>
 		<div class="one_column latest_news_small row_height_medium">
 			<h2 id="news">News that mentions the <?php echo $party['name']; ?> party leader</h2>
 			<p class="grey small">News articles are gathered from <a href="http://news.google.ca">Google News</a> by searching for the party name.</p>
-			<?php display_news_summaries( $leader_references, 'Party' ); ?>
+			<?php display_news_summaries( $leaders, 'Party' ); ?>
 		</div>
 	<?php endif; ?>
 </div>
