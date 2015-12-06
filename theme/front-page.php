@@ -54,7 +54,7 @@ get_header(); ?>
 	if ( $news_count ) : ?>
 		<div class="one_column latest_news_small">
 			<h2>Latest Election News</h2>
-			<?php display_news_titles( array(), true, $news_count ); ?>
+			<?php display_news_titles( null, true, $news_count ); ?>
 		</div>
 	<?php endif;
 	if ( $parties ) : ?>

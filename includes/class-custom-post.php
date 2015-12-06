@@ -204,7 +204,7 @@ class ED_Custom_Post_Type {
 		
 		$this->taxonomy_meta = array();
 		foreach ( $taxonomy_meta as $name => $tax_meta_config ) {
-			$this->taxonomy_meta[$name] = new Tax_Meta( $tax_meta_config['taxonomy'], $tax_meta_config['fields'], array( 'Description', ), $define_hooks );
+			$this->taxonomy_meta[$name] = new Tax_Meta( $tax_meta_config, $define_hooks );
 		}
 		
 		if ( $define_hooks ) {

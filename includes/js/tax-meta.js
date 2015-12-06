@@ -5,29 +5,20 @@ jQuery(document).ready( function($) {
 			continue;
 		}
 
-		if ( tm_data['mode'] == 'add' ) {
-			query = ' .form-field label:contains("' + field + '")';
-		} else {
-			query = ' .form-field th:contains("' + field + '")';
-		}
+		query = ' .term-' + field + '-wrap, .column-' + field;
 		var x = $( query );
-		switch ( field ) {
-			case 'Name':
-			case 'Slug':
-			case 'Parent':
-			case 'Description':
-				if ( tm_data['mode'] == 'add' ) {
-					$( query ).each( function( i ) {
-						$( this ).parent().hide();
-					} );
-				} else {
-					$( query ).each( function( i ) {
-						$( this ).parent().hide();
-					} );
-				}
-				break;
-				
+		$( query ).hide();
+	}
+	
+	for ( var field in tm_rename_fields ) {
+		if ( !tm_rename_fields.hasOwnProperty( field ) ) {
+			continue;
 		}
+		
+		var label = tm_rename_fields[field];
+		query = ' .term-' + field + '-wrap label, .column-' + field + ' a span';
+		var x = $( query );
+		$( query ).text(label);
 	}
 	
 	$( document ).ajaxComplete(function( event, xhr, settings ) {

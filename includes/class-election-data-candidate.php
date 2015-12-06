@@ -192,7 +192,7 @@ class Election_Data_Candidate {
 					'qanda_token' => array(
 						'id' => 'qanda_token',
 						'type' => 'text_with_load_value_button',
-						'std' => '',
+						'std_callback' => array($this, 'qanda_random_token'),
 						'imported' => true,
 						'desc' => __( 'The token required to edit the questionnaire.' ),
 						'label' => __( 'Questionnaire Token' ),
@@ -339,12 +339,13 @@ class Election_Data_Candidate {
 						array(
 							'id' => 'qanda_token',
 							'type' => 'text_with_load_value_button',
-							'std' => '',
+							'std_callback' => array( $this, 'qanda_random_token' ),
 							'imported' => true,
 							'desc' => __( 'The token required to edit the questionnaire.' ),
 							'label' => __( 'Questionnaire Token' ),
 							'button_label' => __( 'Generate Token' ),
 							'ajax_callback' => 'ed_qanda_random_token',
+							'std' => '',
 						),
 						array(
 							'id' => 'qanda_sent',
@@ -360,6 +361,9 @@ class Election_Data_Candidate {
 							'std' => '',
 							'imported' => false,
 						),
+					),
+					'renamed' => array(
+						'description' => 'Alternate Name',
 					),
 				),
 				'constituency' => array(
@@ -390,6 +394,7 @@ class Election_Data_Candidate {
 							'imported' => true,
 						),
 					),
+					'hidden' => array( 'description' ),
 				),
 			),
 		);

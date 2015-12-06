@@ -399,7 +399,6 @@ class Election_Data_Callback_Helper {
 
 		$html .= '<br />';
 		$html .= $this->get_label_for( $args['id'], $args['desc'] );
-
 		echo $html;
 	}
 
@@ -501,7 +500,7 @@ class Election_Data_Callback_Helper {
 
 		if ( $wp_version >= 3.3 && function_exists( 'wp_editor' ) ) {
 			ob_start();
-			wp_editor( stripslashes( $value ), 'election_data_settings_' . $args['id'], array( 'textarea_name' => 'election_data_settings[' . $args['id'] . ']' ) );
+			wp_editor( stripslashes( $value ), 'election_data_settings_' . $args['id'], array( 'textarea_name' => 'election_data_settings[' . $args['id'] . ']', 'wpautop' => false ) );
 			$html = ob_get_clean();
 		} else {
 			$html = '<textarea' . $this->get_id_and_name_attrubutes( $args['id'] ) . 'class="' . $args['size'] . '-text" rows="10" >' . esc_textarea( stripslashes( $value ) ) . '</textarea>';

@@ -561,6 +561,7 @@ class Election_Data {
 	{
 		$this->candidate->erase_data();
 		$this->news_article->erase_data();
+		$this->answer->erase_data();
 		wp_die();
 	}
 	

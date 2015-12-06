@@ -49,11 +49,13 @@ class Tax_Meta {
 	 * @param array $fields
 	 *
 	 */
-	public function __construct( $taxonomy, $fields, $hidden = array(), $define_hooks = true ) {
-		$this->fields = $fields;
+	public function __construct( $args, $define_hooks = true ) {
+		$this->fields = $args['fields'];
+		$taxonomy = $args['taxonomy'];
 		$this->taxonomy = $taxonomy;
 		$this->prefix = "tm_{$taxonomy}_";
-		$this->hidden = $hidden;
+		$this->hidden = isset( $args['hidden'] ) ? $args['hidden'] : array();
+		$this->renamed = isset( $args['renamed'] ) ? $args['renamed'] : array();
 		
 		if ( $define_hooks ) {
 			add_action( 'delete_term', array( $this, 'delete_meta'), 10, 3 );
@@ -80,6 +82,11 @@ class Tax_Meta {
 				$translation_array[$field] = $field;
 			}
 			wp_localize_script( $script_id, 'tm_remove_fields', $translation_array );
+			$translation_array = array();
+			foreach ( $this->renamed as $old => $new ) {
+				$translation_array[$old] = $new;
+			}
+			wp_localize_script( $script_id, 'tm_rename_fields', $translation_array );
 			wp_enqueue_script( $script_id );
 			if ( $this->has_type( 'image' ) ) {
 				$script_id = "tax-meta-image-$taxonomy";
@@ -140,7 +147,7 @@ class Tax_Meta {
 			$footer = '';
 		}
 		$id = esc_attr( "{$this->prefix}{$field['id']}" );
-		$label = esc_html( $field['label'] );
+		$label = $field['label'];
 		echo "$header<label for='$id'>$label</label>$footer";
 	}
 	
@@ -157,8 +164,8 @@ class Tax_Meta {
 		}
 		$this->display_field_label( $field, $mode );
 		echo $header;
-		wp_editor( $value, esc_attr( "{$this->prefix}{$field['id']}" ) );
-		$desc = esc_html( $field['desc'] );
+		wp_editor( $value, esc_attr( "{$this->prefix}{$field['id']}" ), array( 'wpautop' => false ) );
+		$desc = $field['desc'];
 		echo "<p>$desc</p>$footer";
 	}
 	
@@ -190,7 +197,7 @@ class Tax_Meta {
 		}
 		$this->display_field_label( $field, $mode );
 		$id = esc_attr( "{$this->prefix}{$field['id']}" );
-		$desc = esc_html( $field['desc'] );
+		$desc = $field['desc'];
 		echo "$header<img id='{$id}_img' src='$image_url' style='max-width:100%'/>";
 		echo "<input type='text' name='$id' id='$id' value='$image_id' />";
 		echo "<br><input type='button' id='{$id}_add' name='{$id}_add' value='Select Image' $add_class/>";
@@ -212,7 +219,7 @@ class Tax_Meta {
 		$id = esc_attr( "{$this->prefix}{$field['id']}" );
 		$value = esc_attr( $value );
 		$this->display_field_label( $field, $mode );
-		$desc = esc_html( $field['desc'] );
+		$desc = $field['desc'];
 		echo "$header<input type='text' id='$id' name='$id' value='$value'/>";
 		echo "<button id='{$id}_button' type='button'>{$field['button_label']}</button>";
 		echo "<p>$desc</p>$footer";
@@ -269,7 +276,6 @@ class Tax_Meta {
 	
 	protected function show_hidden( $field, $mode, $value ) {
 	}
-			
 	
 	protected function show_url( $field, $mode, $value ) {
 		$this->show_text( $field, $mode, $value, 'url' );
@@ -290,6 +296,9 @@ class Tax_Meta {
 			$values = array();
 		}
 		foreach ( $this->fields as $field ) {
+			if ( ! empty( $field['std_callback'] ) ) {
+				$field['std'] = call_user_func( $field['std_callback'] );
+			}
 			call_user_func( array( $this, "show_{$field['type']}" ), $field, $mode, isset( $values[$field['id']] ) ? $values[$field['id']] : $field['std'] );
 		}
 	}

@@ -219,7 +219,7 @@ class Election_Data_Answer {
 							'id' => 'question',
 							'std' => '',
 							'label' => __( 'The Question' ),
-							'desc' => __( 'The question for the candidate or for the party.' ),
+							'desc' => __( "The question for the candidate or for the party. The following substitutions will occur for both candidate and party questions:<br><list><li>*party* → The name of the candidate's party</li><li>*party_alt* → The alternate name of the candidate's party</li></list><br>Additionally, the following substitution will occur for candidate questions:<br><list><li>*candidate* → The name of the candidate</li></list>" ),
 							'imported' => true,
 						),
 					),
@@ -439,6 +439,9 @@ class Election_Data_Answer {
 	{
 		add_filter( 'query_vars', array( $this, 'add_query_vars_filter' ) );
 		add_action( 'wp_ajax_election_data_create_answers', array( $this, 'ajax_create_answers' ) );
+		add_action( 'wp_ajax_election_data_send_email', array( $this, 'ajax_send_email' ) );
+		add_action( 'wp_ajax_election_data_reset_party_questionnaire', array( $this, 'ajax_reset_party_questionnaire' ) );
+		add_action( 'wp_ajax_election_data_reset_candidate_questionnaire', array( $this, 'ajax_reset_candidate_questionnaire' ) );
 	}	
 
 	
@@ -605,6 +608,168 @@ class Election_Data_Answer {
 	 */
 	public function import_csv( $type, $csv, $mode ) {
 		return call_user_func( array( $this, "import_{$type}_csv" ), $csv, $mode );
+	}
+	
+	public function send_email( $message_contents ){
+		require_once 'Html2Text.php';
+		require_once ABSPATH . WPINC . '/class-phpmailer.php';
+		$mail = new PHPMailer();
+		$mail->isSMTP();
+		$mail->Host = Election_Data_Option::get_option( 'smtp-server' );
+		$mail->Port = Election_Data_Option::get_option( 'smtp-port' );
+		$smtp_user = Election_Data_Option::get_option( 'smtp-user' );
+		if ( $smtp_user ) {
+			$mail->SMTPAuth = true;
+			$mail->Username = $smtp_user;
+			$mail->Password = Election_Data_Option::get_option( 'smtp-password' );
+		} else {
+			$mail->SMTPAuth = false;
+		}
+		$mail->SMTPSecure = Election_Data_Option::get_option( 'smtp-encryption' );
+		$mail->SetFrom(Election_Data_Option::get_option( 'from-email-address' ), Election_Data_Option::get_option( 'from-email-name' ) );
+		$mail->Subject = $message_contents['subject'];
+		$mail->Body = $message_contents['body'];
+		$html = new \Html2Text\Html2Text( $message_contents['body'] );
+		$mail->AltBody = $html->getText();
+		$mail->isHTML = true;
+		$mail->AddAddress( $message_contents['recipient'], $message_contents['recipient-name'] );
+		$mail->Send();
+	}
+	
+	public function get_pattern_replacements( $type, $term ) {
+		global $ed_taxonomies;
+		
+		$replacements = array();
+		switch( $type ) {
+			case 'party':
+				$party_id = get_tax_meta( $term->term_id, 'candidate_party_term_id' );
+				$party = get_term( $party_id, $ed_taxonomies['candidate_party'] );
+				$token = get_tax_meta( $party_id, 'qanda_token' );
+				break;
+			case 'candidate':
+				$candidate_id = get_tax_meta( $term->term_id, 'candidate_id' );
+				$candidate = get_post( $candidate_id );
+				$replacements['candidate'] = get_the_title( $candidate );
+				$parties = get_the_terms( $candidate, $ed_taxonomies['candidate_party'] );
+				$party = $parties[0];
+				$token = get_post_meta( $candidate_id, 'qanda_token', true );
+				break;
+		}
+
+		$url = get_term_link( $term, $this->taxonomies[$type] );
+		$replacements['question_url'] = "<a href='$url?token=$token'>$url</a>";
+		$replacements['party'] = $party->name;
+		$replacements['party_alt'] = $party->description;
+		$replacements['question'] = implode( get_qanda_questions( $type, $term ) );
+		$pattern = array();
+		$replace = array();
+		foreach ( $replacements as $old => $new ) {
+			$pattern[] = "/\*$old\*/";
+			$replace[] = $new;
+		}
+		
+		return array( 'pattern' => $pattern, 'replacement' => $replace );
+	}
+		
+	public function email_party_questions() {
+		global $ed_taxonomies;
+		$args = array(
+			'fields' => 'ids',
+		);
+		$answer_party_ids = get_terms( $this->taxonomies['party'], $args );
+		foreach ( $answer_party_ids as $answer_party_id ) {
+			$party_id = get_tax_meta( $answer_party_id, 'candidate_party_term_id' );
+			if ( get_tax_meta( $party_id, 'qanda_sent' ) ) {
+				continue;
+			}
+			
+			$party = get_term( $party_id, $ed_taxonomies['candidate_party'] );
+			$replacements = $this->get_pattern_replacements( 'party', get_term( $answer_party_id, $this->taxonomies['party'] ) );
+			$pattern = $replacements['pattern'];
+			$replacement = $replacements['replacement'];
+			$message = array(
+				'subject' => preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'subject-party' ) ),
+				'recipient' => get_tax_meta( $party_id, 'email' ),
+				'recipient-name' => '',
+				'body' => '<html><head></head><body>' . preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'email-party' ) ) . '</body></html>',
+			);
+			$this->send_email( $message );
+			update_tax_meta( $party_id, 'qanda_sent', true );
+		}
+	}
+	
+	public function email_candidate_questions() {
+		$args = array(
+			'fields' => 'ids',
+		);
+		$answer_candidate_ids = get_terms( $this->taxonomies['candidate'], $args );
+		foreach ( $answer_candidate_ids as $answer_candidate_id ) {
+			$candidate_id = get_tax_meta( $answer_candidate_id, 'candidate_id' );
+			if ( get_post_meta( $candidate_id, 'qanda_sent', true ) ) {
+				continue;
+			}
+			
+			$candidate = get_post( $candidate_id );
+			$replacements = $this->get_pattern_replacements( 'candidate', get_term( $answer_candidate_id, $this->taxonomies['candidate'] ) );
+			$pattern = $replacements['pattern'];
+			$replacement = $replacements['replacement'];
+			$message = array(
+				'subject' => preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'subject-candidate' ) ),
+				'recipient' => get_post_meta( $candidate_id, 'email', true ),
+				'recipient-name' => get_the_title( $candidate ),
+				'body' => '<html><head></head><body>' . preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'email-candidate' ) ) . '</body></html>',
+			);
+			$this->send_email( $message );
+			update_post_meta( $candidate_id, 'qanda_sent', true );
+		}
+	}
+	
+	public function email_all_questions() {
+		$this->email_candidate_questions();
+		$this->email_party_questions();
+	}
+	
+	public function ajax_send_email() {
+		$this->email_all_questions();
+		wp_die();
+	}
+	
+	public function reset_party_questionnaire() {
+		global $ed_taxonomies;
+		global $ed_post_types;
+		$args = array(
+			'hide_empty' => false,
+			'fields' => 'ids',
+		);
+		$term_ids = get_terms( $ed_taxonomies['candidate_party'], $args );
+		foreach ( $term_ids as $term_id ) {
+			update_tax_meta( $term_id, 'qanda_sent', false );
+		}
+	}
+
+	public function reset_candidate_questionnaire() {
+		global $ed_taxonomies;
+		global $ed_post_types;
+		$args = array(
+			'post_type' => $ed_post_types['candidate'],
+			'nopaging' => true,
+		);
+		$query = new WP_Query( $args );
+		while ( $query-> have_posts() ) {
+			$query->the_post();
+			update_post_meta( $query->post->ID, 'qanda_sent', false );
+		}
+	}
+
+	
+	public function ajax_reset_party_questionnaire() {
+		$this->reset_party_questionnaire();
+		wp_die();
+	}
+	
+	public function ajax_reset_candidate_questionnaire() {
+		$this->reset_candidate_questionnaire();
+		wp_die();
 	}
 	
 	/**

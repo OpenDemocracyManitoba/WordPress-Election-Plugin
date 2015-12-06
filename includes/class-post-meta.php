@@ -177,6 +177,9 @@ class Post_Meta {
 		echo '<table class="form-table">';
 		foreach ( $this->fields as $field ) {
 			echo '<tr>';
+			if ( !empty( $field['std_callback'] ) ) {
+				$field['std'] = call_user_func( $field['std_callback'] );
+			}
 			$value = get_post_meta( $post->ID, $field['id'], true );
 			call_user_func( array( $this, "show_{$field['type']}" ), $field, 'edit', maybe_serialize ( $value ) );
 			echo '</tr>';
@@ -235,9 +238,13 @@ class Post_Meta {
 		foreach ( $this->fields as $field ) {
 			// Skip the field if it has not been posted.
 			// Also skip the field if it is empty (false) and skip_empty is true.
-			if ( isset( $_POST[$this->prefix . $field['id']] ) && ( !$skip_empty || $_POST[$this->prefix . $field['id']] ) ) {
-				$new = $_POST[$this->prefix . $field['id']];
-				update_post_meta( $post_id, stripslashes( $field['id'] ), $new );
+			if ( method_exists( $this, "save_post_data_{$field['type']}" ) ) {
+				call_user_func( array( $this, "save_post_data_{$field['type']}" ), $post_id, $field, $skip_empty );
+			} else {
+				if ( isset( $_POST[$this->prefix . $field['id']] ) && ( !$skip_empty || $_POST[$this->prefix . $field['id']] ) ) {
+					$new = $_POST[$this->prefix . $field['id']];
+					update_post_meta( $post_id, stripslashes( $field['id'] ), $new );
+				}
 			}
 		}
 	}
@@ -271,6 +278,9 @@ class Post_Meta {
 			echo "<div id='$column-" . get_the_ID() . "'>";
 			$field = $this->fields[$column];
 			$value = get_post_meta( get_the_ID(), $field['id'], true );
+			if ( !empty( $field['std_callback'] ) ) {
+				$field['std'] = call_user_func( $field['std_callback'] );
+			}
 			call_user_func( array( $this, "show_{$field['type']}" ), $field, 'column', $value );
 			echo '</div>';
 		}
@@ -312,6 +322,9 @@ class Post_Meta {
 		if ( isset( $this->admin_columns[$column_name] ) ) {
 			$field = $this->fields[$column_name];
 			echo '<fieldset class="inline-edit-col-right"><div class="inline-edit-col"><div class="inline-edit-group">';
+			if ( !empty( $field['std_callback'] ) ) {
+				$field['std'] = call_user_func( $field['std_callback'] );
+			}
 			call_user_func( array( $this, "show_{$field['type']}" ), $field, $type, '' );
 			echo '</div></div></fieldset>';
 		}
@@ -465,7 +478,7 @@ class Post_Meta {
 	 */
 	protected function display_edit_label( $field )
 	{
-		$label = esc_html( $field['label'] );
+		$label = $field['label'];
 		echo "<th style='width: 20%'><label for='{$this->prefix}{$field['id']}'>$label</label></th>";
 	}
 	
@@ -478,7 +491,7 @@ class Post_Meta {
 	 *
 	 */
 	protected function display_quick_label ( $field ) {
-		$label = esc_html( $field['label'] );
+		$label = $field['label'];
 		echo "<label class='alignleft'><span class='title'>$label</span></label>";
 	}
 	
@@ -610,6 +623,13 @@ class Post_Meta {
 	 */	
 	protected function show_email ( $field, $mode, $value ) {
 		$this->show_text ( $field, $mode, $value, 'email' );
+	}
+	
+	protected function save_post_data_checkbox( $post_id, $field, $skip_empty ) {
+		$new = isset( $_POST[$this->prefix . $field['id']] );
+		if ( ! $skip_empty || $new ) {
+			update_post_meta( $post_id, stripslashes( $field['id'] ), $new );
+		}
 	}
 	
 	/**

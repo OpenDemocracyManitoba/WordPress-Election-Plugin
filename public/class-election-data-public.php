@@ -182,7 +182,7 @@ function get_party( $party, $get_extra_data = true ) {
 	);
 		
 	if ( $get_extra_data ) {
-		$results['answers'] = get_qanda_answers( 'party', $party_id );
+		$results['answers'] = get_qanda_answers( 'party', $party );
 		$party_logo = get_tax_meta( $party_id, 'logo' );
 		$results['logo_id'] = $party_logo ? $party_logo : Election_Data_Option::get_option( 'missing_party' );
 		$results['website'] = get_tax_meta( $party_id, 'website' );
@@ -304,6 +304,10 @@ function get_qanda_questions( $type, $term ) {
 					'terms' => $term->term_id,
 				),
 			);
+			$party_id = get_tax_meta( $term->term_id, 'candidate_party_term_id' );
+			$party = get_term( $party_id, $ed_taxonomies['candidate_party'] );
+			$pattern = array( '/\*party\*/', '/\*party_alt\*/' );
+			$replacement = array( $party->name, $party->description );
 			break;
 		case 'candidate':
 			$query_args['tax_query'] = array(
@@ -312,6 +316,12 @@ function get_qanda_questions( $type, $term ) {
 					'terms' => $term->term_id,
 				),
 			);
+			$candidate_id = get_tax_meta( $term->term_id, 'candidate_id' );
+			$candidate = get_post( $candidate_id );
+			$pattern = array( '/\*candidate\*/', '/\*party\*/', '/\*party_alt\*/' );
+			$parties = get_the_terms( $candidate, $ed_taxonomies['candidate_party'] );
+			$party = $parties[0];
+			$replacement = array( get_the_title( $candidate ), $party->name, $party->description );
 			break;
 	}
 	$questions = array();
@@ -324,7 +334,7 @@ function get_qanda_questions( $type, $term ) {
 			continue;
 		}
 		$question = $answer_questions[0];
-		$questions[$post->ID] = get_tax_meta( $question->term_id, 'question' );
+		$questions[$post->ID] = preg_replace( $pattern, $replacement, get_tax_meta( $question->term_id, 'question' ) );
 	}
 
 	return $questions;
@@ -340,20 +350,28 @@ function get_qanda_answers( $type, $id ) {
 	);
 	switch ( $type ) {
 		case 'party':
+			$party = get_term( $id, $ed_taxonomies['candidate_party'] );
 			$query_args['tax_query'] = array(
 				array(
 					'taxonomy' => $ed_taxonomies['answer_party'],
-					'terms' => get_tax_meta( $id, 'qanda_party_id', true ),
+					'terms' => get_tax_meta( $party->term_id, 'qanda_party_id', true ),
 				),
 			);
+			$pattern = array( '/\*party\*/', '/\*party_long\*/' );
+			$replacement = array( $party->name, $party->description );
 			break;
 		case 'candidate':
+			$candidate = get_post( $id );
 			$query_args['tax_query'] = array(
 				array(
 					'taxonomy' => $ed_taxonomies['answer_candidate'],
-					'terms' => get_post_meta( $id, 'qanda_candidate_id', true ),
+					'terms' => get_post_meta( $candidate->ID, 'qanda_candidate_id', true ),
 				),
 			);
+			$pattern = array( '/\*candidate\*/', '/\*party\*/', '/\*party_long\*/' );
+			$parties = get_the_terms( $candidate, $ed_taxonomies['candidate_party'] );
+			$party = $parties[0];
+			$replacement = array( get_the_title( $candidate ), $party->name, $party->description );
 			break;
 	}
 	$answers = array();
@@ -370,7 +388,8 @@ function get_qanda_answers( $type, $id ) {
 			continue;
 		}
 		$question = $questions[0];
-		$answers[get_tax_meta( $question->term_id, 'question' )] = $answer;
+		$question_text = preg_replace( $pattern, $replacement, get_tax_meta( $question->term_id, 'question' ) );
+		$answers[$question_text] = $answer;
 	}
 
 	return $answers;

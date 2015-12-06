@@ -219,7 +219,6 @@ class Election_Data_Sanitization_Helper {
 	 * @return 	string 		$input 		Sanitizied value
 	 */
 	public function sanitize_text_field( $input ) {
-
 		return sanitize_text_field( $input );
 	}
 

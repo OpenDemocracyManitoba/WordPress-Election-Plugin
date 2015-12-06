@@ -61,17 +61,14 @@ add_action( 'wp_enqueue_scripts', 'election_data_theme_scripts' );
 
 function configure_menu() {
 	$menu_name = 'Election Data Navigation Menu';
-	$menu_id = wp_get_nav_menu_object( $menu_name );
-	if ( $menu_id ) {
-		
+	$menu = wp_get_nav_menu_object( $menu_name );
+	if ( $menu ) {
 		$locations = get_theme_mod( 'nav_menu_locations' );
 		if ( empty( $locations['header-menu'] ) ) {
-			$locations['header-menu'] = $menu_id;
+			$locations['header-menu'] = $menu->term_id;
 			set_theme_mod( 'nav_menu_locations', $locations );
 		}
 	}
-	
-	delete_option( 'edt_theme_menu_check' );
 }
 
 add_action( 'after_switch_theme', 'configure_menu' );
@@ -107,16 +104,28 @@ function news_titles( $article_query, $paging_type, $candidate_ids = null, $pagi
 				<ul class="news">
 			<?php endif;
 			$candidates = wp_get_post_terms( $article_id, $ed_taxonomies['news_article_candidate'] );
-			$mentions = array();
+			$news_article_candidate_ids = array();
 			foreach ( $candidates as $candidate ) :
-				if ( ! is_null( $candidate_ids ) and ! in_array( $candidate->term_id, $candidate_ids ) ) {
-					continue;
-				}
-				$candidate_id = get_tax_meta( $candidate->term_id, 'news_article_candidate_id' );
-				$url = get_permalink( get_post( $candidate_id ) );
-				$name = esc_attr( $candidate->name );
+				$news_article_candidate_ids[] = $candidate->term_id;
+			endforeach;
+			$args = array( 
+				'post_type' => $ed_post_types['candidate'],
+				'meta_query' => array(
+					array(
+						'key' => 'news_article_candidate_id',
+						'value' => $news_article_candidate_ids,
+						'compare' => 'IN'
+					),
+				),
+			);
+			$mentions = array();
+			$query = new WP_Query( $args );
+			while ( $query->have_posts() ) :
+				$query->the_post();
+				$url = get_permalink( $query->post );
+				$name = esc_attr( get_the_title( $query->post ) );
 				$mentions[] = "<a href='$url'>$name</a>";
-			endforeach; ?>
+			endwhile; ?>
 			<li>
 				<p class="link"><a href="<?php echo esc_attr( get_post_meta( $article_id, 'url', true ) ); ?>"><?php echo get_the_title( $article_id ); ?></a></p>
 				<p class="mentions">Mentions:
