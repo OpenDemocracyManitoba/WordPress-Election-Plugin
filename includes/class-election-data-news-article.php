@@ -127,6 +127,11 @@ class Election_Data_News_Article {
 				'has_archive' => true,
 				'query_var' => 'news_article',
 				'rewrite' => array( 'slug' => __( 'news_articles' ), 'with_front' => false ),
+				'capability_type' => 'post',
+				'capabilities' => array(
+					'create_posts' => false,
+				),
+				'map_meta_cap' => true,
 			),
 			'taxonomy_filters' => array( $this->taxonomies['source'], $this->taxonomies['candidate'] ),
 			'sortable_taxonomies' => array( $this->taxonomies['source'], $this->taxonomies['candidate'] ),

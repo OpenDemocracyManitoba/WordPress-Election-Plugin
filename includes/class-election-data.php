@@ -184,7 +184,6 @@ class Election_Data {
 		$plugin_i18n->set_domain( $this->get_plugin_name() );
 
 		$this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
-
 	}
 
 	/**
@@ -219,6 +218,7 @@ class Election_Data {
 
 		$this->loader->add_action( 'wp_ajax_election_data_erase_site', $this, 'erase_data' );
 		$this->loader->add_action( 'admin_notices', 'Election_Data_Activator', 'display_activation_warnings' );
+		$this->loader->add_action( 'admin_menu', $this, 'remove_menus', 110 );
 	}
 
 	/**
@@ -276,6 +276,13 @@ class Election_Data {
 	 */
 	public function get_version() {
 		return $this->version;
+	}
+	
+	public function remove_menus() {
+		remove_menu_page( 'edit.php' );
+		remove_menu_page( 'edit.php?post_type=page' );
+		remove_menu_page( 'edit-comments.php' );
+		remove_submenu_page( 'themes.php', 'theme-editor.php' );
 	}
 	
 	public static function import_csv( $csv, $mode ) {
