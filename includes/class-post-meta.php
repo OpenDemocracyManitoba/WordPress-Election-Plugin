@@ -680,6 +680,9 @@ class Post_Meta {
 				if ( isset( $meta_values[$field['id']] ) && isset( $meta_values[$field['id']][0] ) ) {
 					$values[$field['id']] = maybe_serialize( $meta_values[$field['id']][0] );
 				} else {
+					if ( !empty( $field['std_callback'] ) ) {
+						$field['std'] = call_user_func( $field['std_callback'] );
+					}
 					$values[$field['id']] = maybe_serialize( $field['std'] );
 				}
 			}
@@ -695,6 +698,9 @@ class Post_Meta {
 			if ( $field['imported'] && isset( $data[$field['id']] ) && ( 'overwrite' == $mode || empty( $meta_values[$field['id']] ) ) ) {
 				update_post_meta( $post_id, $field['id'], maybe_unserialize( $data[$field['id']] ) );
 			} elseif ( empty( $meta_values[$field['id']] ) ) {
+				if ( !empty( $field['std_callback'] ) ) {
+					$field['std'] = call_user_func( $field['std_callback'] );
+				}
 				update_post_meta( $post_id, $field['id'], $field['std'] );
 			}
 		}

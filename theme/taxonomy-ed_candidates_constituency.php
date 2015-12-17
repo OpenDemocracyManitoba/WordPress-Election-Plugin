@@ -53,7 +53,8 @@ get_header();?>
 			<h2 id="news">Latest Candidate News</h2>
 			<p class="grey small">Recent articles that mention candidates from this race.</p>
 			<br>
-			<?php display_news_titles( $candidate_references ); ?>
+			<?php $article_count = Election_Data_Option::get_option('news-count-constituency', 10);
+			display_news_titles( $candidate_references, false, $article_count ); ?>
 		</div>
 	</div>
 

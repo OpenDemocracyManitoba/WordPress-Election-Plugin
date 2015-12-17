@@ -340,14 +340,18 @@ function get_qanda_questions( $type, $term ) {
 	return $questions;
 }
 
-function get_qanda_answers( $type, $id ) {
+function get_qanda_answers( $type, $id, $count = null ) {
 	global $ed_post_types;
 	global $ed_taxonomies;
 	$query_args = array(
 		'post_type' => $ed_post_types['answer'],
-		'nopaging' => true,
 		'post_status' => 'publish'
 	);
+	if ( isset ( $count ) ) {
+		$query_args['posts_per_page'] = $count;
+	} else {
+		$query_args['nopaging'] = true;
+	}
 	switch ( $type ) {
 		case 'party':
 			$party = get_term( $id, $ed_taxonomies['candidate_party'] );
@@ -395,7 +399,7 @@ function get_qanda_answers( $type, $id ) {
 	return $answers;
 }
 
-function get_candidate( $candidate_id ) {
+function get_candidate( $candidate_id, $get_qanda = false ) {
 	$image_id = get_post_thumbnail_id( $candidate_id );
 	$image_id = $image_id ? $image_id : Election_Data_Option::get_option( 'missing_candidate' );
 	
@@ -413,11 +417,18 @@ function get_candidate( $candidate_id ) {
 		'party_leader' => get_post_meta( $candidate_id, 'party_leader', true ),
 		'url' => get_permalink( $candidate_id ),
 		'news_article_candidate_id' => get_post_meta( $candidate_id, 'news_article_candidate_id', true ),
-		'answers' => get_qanda_answers( 'candidate', $candidate_id ),
-		'qanda_token' => get_post_meta( $candidate_id, 'qanda_token', true ),
 	);
-	$results['qanda'] = empty( $results['answers'] ) ? '' : "{$results['url']}#qanda";
-	
+	if ( $get_qanda ) {
+		$results['answers'] = get_qanda_answers( 'candidate', $candidate_id );
+		$results['qanda_token'] = get_post_meta( $candidate_id, 'qanda_token', true );
+		$has_qanda = ! empty( $results['answers'] );
+	} else {
+		$answers = get_qanda_answers( 'candidate', $candidate_id, 1 );
+		$has_qanda = ! empty( $answers );
+	}
+	$news = get_news( $results['news_article_candidate_id'], 1, 1 );
+	$results['news_count'] = $news['count'];
+	$results['qanda'] = $has_qanda ? "{$results['url']}#qanda" : '';
 	$icon_data = array();
 	foreach ( array('email', 'facebook', 'youtube', 'twitter', 'qanda' ) as $icon_type ) {
 		$value = $results[$icon_type];
@@ -450,9 +461,13 @@ function get_candidate( $candidate_id ) {
 	return $results;
 }
 
-function get_news( $candidate_id = null, $page = 1, $articles_per_page = 20 ) {
+function get_news( $candidate_id = null, $page = 1, $articles_per_page = null ) {
 	global $ed_post_types;
 	global $ed_taxonomies;
+	
+	if ( ! $articles_per_page ) {
+		$articles_per_page = get_option( 'posts_per_page' );
+	}
 	$args = array(
 		'post_type' => $ed_post_types['news_article'],
 		'post_status' => 'publish',

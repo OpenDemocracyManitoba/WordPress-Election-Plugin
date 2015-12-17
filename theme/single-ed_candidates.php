@@ -2,14 +2,11 @@
 /**
  * The template for displaying all single posts and attachments
  *
- * @package WordPress
- * @subpackage Twenty_Fifteen
- * @since Twenty Fifteen 1.0
  */
 
 //get_header(); 
 $candidate_id = get_the_ID();
-$candidate = get_candidate( $candidate_id );
+$candidate = get_candidate( $candidate_id, true );
 $party = get_party_from_candidate( $candidate_id );
 $constituency = get_constituency_from_candidate( $candidate_id );
 $candidate_news = get_news( $candidate['news_article_candidate_id'] );
@@ -23,7 +20,7 @@ get_header(); ?>
 <div class="flow_it">
 <?php endif; ?>
 	<div class="politicians">
-		<?php display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'constituency', 'party' ), 'constituency' ); ?>
+		<?php display_candidate( $candidate, $constituency, $party, array( 'constituency', 'party' ), 'constituency' ); ?>
 	</div>
 	<?php  if ( $has_qanda ) :  ?>
 	<div class="one_column">
@@ -32,14 +29,15 @@ get_header(); ?>
 	<?php endif; ?>
 		<h2 id="news">News that mentions <?php echo $candidate['name']; ?></h2>
 		<p class="news-article-notice">Articles are gathered from <a href="http://news.google.ca">Google News</a> by searching for the candidate's full name.</p>
-		<?php display_news_summaries( $candidate['news_article_candidate_id'], 'Candidate' ); ?>
+		<?php $article_count = Election_Data_Option::get_option('news-count-candidate', 10);
+		display_news_summaries( $candidate['news_article_candidate_id'], 'Candidate', $article_count ); ?>
 	</div>
 </div>
 <?php if ( $has_qanda ) : ?>
 <div class="two_columns_early_shrink">
 	<h2 id="qanda">Questionnaire Response</h2>
 	<div class="questionnaire">
-		<p class="visible_block_when_mobile" ><?php echo "{$candidate['name']} - {$candidate['constituency']}"; ?></p>
+		<p class="visible_block_when_mobile" ><?php echo "{$candidate['name']} - {$constituency['name']}"; ?></p>
 		<?php foreach ( $candidate['answers'] as $question => $answer ) :?>
 			<p><strong><?php echo $question; ?></strong></p>
 			<p><?php echo $answer; ?></p>

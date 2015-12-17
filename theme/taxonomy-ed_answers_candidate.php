@@ -21,7 +21,6 @@ $candidate = get_candidate_from_answer_candidate( $answer_candidate );
 $candidate_id = $candidate['id'];
 $party = get_party_from_candidate( $candidate_id );
 $constituency = get_constituency_from_candidate( $candidate_id );
-$candidate_news = get_news( $candidate['news_article_candidate_id'] );
 $show_edit = can_edit_answers( 'candidate', $candidate_id );
 $has_qanda = count( $candidate['answers'] ) > 0;
 $questions = get_qanda_questions( 'candidate', get_queried_object() );
@@ -32,7 +31,7 @@ get_header(); ?>
 	<div class="one_column_flow">
 		<div class="flow_it" >
 			<div class="politicians">
-				<?php display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'constituency', 'party' ), 'constituency' ); ?>
+				<?php display_candidate( $candidate, $constituency, $party, array( 'constituency', 'party' ), 'constituency' ); ?>
 			</div>
 		</div>
 	</div>

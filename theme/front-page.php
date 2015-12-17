@@ -50,7 +50,7 @@ get_header(); ?>
 			
 		</div>
 	<?php endif;
-	$news_count = Election_Data_Option::get_option( 'news-count', 10 );
+	$news_count = Election_Data_Option::get_option( 'news-count-front', 10 );
 	if ( $news_count ) : ?>
 		<div class="one_column latest_news_small">
 			<h2>Latest Election News</h2>

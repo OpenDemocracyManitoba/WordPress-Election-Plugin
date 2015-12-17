@@ -80,10 +80,10 @@ function election_data_init() {
 
 add_action( 'init', 'election_data_init' );
 
-function display_news_titles ( $candidate_ids = null, $show_more = false, $count = 20, $pagination = false ) {
+function display_news_titles ( $candidate_ids, $show_more, $count ) {
 	$news = get_news( $candidate_ids, 1, $count );
 	$articles = $news['articles'];
-	news_titles( $articles, $show_more, $candidate_ids );
+	news_titles( $articles, $show_more ? 'more' : '', $candidate_ids );
 }
 
 function news_titles( $article_query, $paging_type, $candidate_ids = null, $paging_args = array() ) {
@@ -134,7 +134,7 @@ function news_titles( $article_query, $paging_type, $candidate_ids = null, $pagi
 			</li>
 		<?php endwhile; ?>
 		</ul>
-		<?php if ( $paging_type === true ) : ?>
+		<?php if ( $paging_type == 'more' ) : ?>
 			<p class="more"><a href="<?php echo get_post_type_archive_link( $ed_post_types['news_article'] ); ?>">More News...</a></p>
 		<?php elseif ( $paging_type ) :
 			$page = get_current_page( $paging_type );
@@ -156,8 +156,7 @@ function display_news_pagination( $args ) {
 }
 
 
-function display_news_summaries ( $candidate_ids, $type, $count = 20 ) {
-	$articles_per_page = 20;
+function display_news_summaries ( $candidate_ids, $type, $articles_per_page ) {
 	$page = get_current_page( $type );
 	$args = get_paging_args( $type, $page );
 	$args['add_fragment'] = "#news";
@@ -168,9 +167,8 @@ function display_news_summaries ( $candidate_ids, $type, $count = 20 ) {
 	global $ed_taxonomies;
 	$news = get_news( $candidate_ids, $page, $articles_per_page );
 	$articles = $news['articles'];
-
 	$args['total'] = round( $news['count'] / $articles_per_page );
-	if ( $articles->have_posts() ) :
+	if ( $articles->have_posts() ) {
 		if ( $news['count'] > $articles_per_page ) {
 			display_news_pagination( $args );
 		} ?>
@@ -197,9 +195,12 @@ function display_news_summaries ( $candidate_ids, $type, $count = 20 ) {
 				</div>
 			<?php endforeach;
 		endwhile;
-	else : ?>
+		if ( $news['count'] > $articles_per_page ) {
+			display_news_pagination( $args );
+		} 
+	} else { ?>
 		<em>No articles found yet.</em>
-	<?php endif;
+	<?php }
 }
 
 function display_news_article( $article, $candidates = false ){
@@ -277,7 +278,7 @@ function display_party( $party ) {
 	</div>
 <?php }
 
-function display_candidate( $candidate, $constituency, $party, $news, $show_fields=array(), $incumbent_location='name' ) {
+function display_candidate( $candidate, $constituency, $party, $show_fields=array(), $incumbent_location='name' ) {
 	$display_name = in_array( 'name', $show_fields );
 	$display_party = in_array('party', $show_fields );
 	$display_constituency = in_array( 'constituency', $show_fields );
@@ -316,7 +317,7 @@ function display_candidate( $candidate, $constituency, $party, $news, $show_fiel
 				<?php endif;
 			endforeach; ?>
 		</div>
-		<div class="news <?php echo $display_news ? '' : 'hidden'; ?>">News: <a href="<?php echo "{$candidate['url']}#news"; ?>"><?php echo esc_html( $news['count'] ); ?> Related Articles</a></div>
+		<div class="news <?php echo $display_news ? '' : 'hidden'; ?>">News: <a href="<?php echo "{$candidate['url']}#news"; ?>"><?php echo esc_html( $candidate['news_count'] ); ?> Related Articles</a></div>
 		<div class="candidate-party <?php echo $display_party ? '' : 'hidden' ?>">Political Party: <a href="<?php echo $party['url']; ?>"><?php echo esc_html( $party['name'] ); ?></a></div>
 		<div class="phone <?php echo $candidate['phone'] ? '' : 'hidden' ?>">Phone: <?php echo esc_html( $candidate['phone'] ); ?></div>
 	</div>
@@ -332,8 +333,7 @@ function display_search_results( $search_query ) {
 				$candidate = get_candidate( $candidate_id );
 				$constituency = get_constituency_from_candidate( $candidate_id );
 				$party  = get_party_from_candidate( $candidate_id );
-				$candidate_news = get_news( $candidate['news_article_candidate_id'], 1, 1 );
-				display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'constituency', 'news' ), 'name' );
+				display_candidate( $candidate, $constituency, $party, array( 'name', 'party', 'constituency', 'news' ), 'name' );
 				break;
 			case $ed_post_types['news_article']:
 				//$news_article = get_news_article( $search_query->post );
@@ -350,8 +350,7 @@ function display_all_candidates( $candidate_query ) {
 		$candidate = get_candidate( $candidate_id );
 		$constituency = get_constituency_from_candidate( $candidate_id );
 		$party  = get_party_from_candidate( $candidate_id );
-		$candidate_news = get_news( $candidate['news_article_candidate_id'], 1, 1 );
-		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'constituency', 'news' ), 'name' );
+		display_candidate( $candidate, $constituency, $party, array( 'name', 'party', 'constituency', 'news' ), 'name' );
 	}
 }
 
@@ -362,8 +361,7 @@ function display_party_candidates( $candidate_query, $party, &$candidates ) {
 		$candidate = get_candidate( $candidate_id );
 		$constituency = get_constituency_from_candidate( $candidate_id );
 		$candidates[] = $candidate['news_article_candidate_id'];
-		$candidate_news = get_news( $candidate['news_article_candidate_id'], 1, 1 ); 
-		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'constituency', 'news' ), 'constituency' );
+		display_candidate( $candidate, $constituency, $party, array( 'name', 'constituency', 'news' ), 'constituency' );
 	}
 }
 
@@ -374,7 +372,6 @@ function display_constituency_candidates( $candidate_query, $constituency, &$can
 		$candidate = get_candidate( $candidate_id );
 		$party = get_party_from_candidate( $candidate_id );
 		$candidates[] = $candidate['news_article_candidate_id'];
-		$candidate_news = get_news( $candidate['news_article_candidate_id'], 1, 1 );
-		display_candidate( $candidate, $constituency, $party, $candidate_news, array( 'name', 'party', 'news' ), 'name' );
+		display_candidate( $candidate, $constituency, $party, array( 'name', 'party', 'news' ), 'name' );
 	}
 }

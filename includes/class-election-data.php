@@ -280,7 +280,6 @@ class Election_Data {
 	
 	public function remove_menus() {
 		remove_menu_page( 'edit.php' );
-		remove_menu_page( 'edit.php?post_type=page' );
 		remove_menu_page( 'edit-comments.php' );
 		remove_submenu_page( 'themes.php', 'theme-editor.php' );
 	}
@@ -309,7 +308,10 @@ class Election_Data {
 				'constituency-subtext' => '',
 				'party-label' => '',
 				'party-subtet' => '',
-				'news-count' => '',
+				'news-count-front' => '',
+				'news-count-party' => '',
+				'news-count-party-leader' => '',
+				'news-count-candidate' => '',
 			),
 			'wordpress' => array(
 				'blogname' => '',
@@ -451,7 +453,7 @@ class Election_Data {
 		$exportable_settings = array(
 			'plugin' => array( 
 				array( 'Election_Data_Option', 'get_option' ),
-				array ( 'location', 'time', 'frequency', 'summary', 'facebook-page', 'twitter', 'google-plus-one', 'constituency-label', 'constituency-subtext', 'party-label', 'party-subtet', 'news-count' ),
+				array ( 'location', 'time', 'frequency', 'summary', 'facebook-page', 'twitter', 'google-plus-one', 'constituency-label', 'constituency-subtext', 'party-label', 'party-subtet', 'news-count-front', 'news-count-party', 'news-count-party_leader', 'news-count-candidate' ),
 			),
 			'wordpress' => array(
 				'get_option',
