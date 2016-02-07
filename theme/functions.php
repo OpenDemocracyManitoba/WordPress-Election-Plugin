@@ -76,6 +76,7 @@ add_action( 'after_switch_theme', 'configure_menu' );
 function election_data_init() {
 	register_nav_menu('header-menu', __( 'Header Menu' ) );
 	add_theme_support( 'custom-header' );
+    add_theme_support( 'post-thumbnails' );
 }
 
 add_action( 'init', 'election_data_init' );

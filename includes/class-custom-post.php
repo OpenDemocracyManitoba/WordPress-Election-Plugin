@@ -181,7 +181,7 @@ class ED_Custom_Post_Type {
 		$this->hidden_admin_filters = empty( $args['hidden_admin_filters'] ) ? array() : $args['hidden_admin_filters'];
 		$this->taxonomy_admin_columns = array();
 		$this->taxonomy_filters = array();
-		if ( $args['taxonomy_filters'] ) {
+		if ( ! empty( $args['taxonomy_filters'] ) ) {
 			foreach ( $args['taxonomy_filters'] as $taxonomy ) {
 				$this->taxonomy_filters[$taxonomy] = '';
 			}
