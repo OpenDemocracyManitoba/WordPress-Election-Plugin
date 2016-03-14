@@ -202,7 +202,9 @@ class Election_Data_News_Article {
 					'public' => false,
 					'show_tagcloud' => false,
 					'show_admin_column' => true,
+                    'show_ui' => true,
 					'show_in_quick_edit' => true,
+                    'show_in_menu' => false,
 					'hierarchical' => true,
 					'query_var' => 'news_candidate',
 					'rewrite' => false,
@@ -225,6 +227,8 @@ class Election_Data_News_Article {
 					'show_tagcloud' => false,
 					'show_admin_column' => true,
 					'show_ui' => true,
+					'show_in_quick_edit' => true,
+                    'show_in_menu' => true,
 					'hierarchical' => true,
 					'query_var' => 'news_source',
 					'rewrite' => false,
@@ -448,6 +452,11 @@ class Election_Data_News_Article {
 		$mentions = $this->get_individual_news_articles( $candidate_name, Election_Data_Option::get_option( 'location' ) );
 		$current_time_zone = new DateTimeZone( get_option( 'timezone_string', 'UTC' ) );
 		foreach ( $mentions as $mention ) {
+            $tmp_name = str_replace( ' ', '|', $candidate_name );
+            $pattern = "/$tmp_name/i";
+            if ( preg_match($pattern, $mention['summary'] ) == 0 ) {
+                continue;
+            }
 			if ( ! isset( $sources[$mention['base_url']] ) ) {
 				$term = wp_insert_term( $mention['base_url'], $this->taxonomies['source'], array( 'parent' => $source_parents['New'], 'description' => $mention['source'] ) );
 				$sources[$mention['base_url']] = array(

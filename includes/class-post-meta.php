@@ -403,15 +403,17 @@ class Post_Meta {
 	 */
 	public function filter_meta( $query ) {
 		global $pagenow;
-		$screen = get_current_screen();
 		
-		if ( is_admin() && $pagenow == 'edit.php' && $this->post_type == $screen->post_type ) {
-			foreach ( $this->meta_filters as $field => $options ) {
-				if ( ! empty( $_GET[$field] ) ) {
-					$query->query_vars['meta_key'] = $field;
-					$query->query_vars['meta_value'] = $_GET[$field];
-				}
-			}
+		if ( is_admin() && $pagenow == 'edit.php' ) {
+            $screen = get_current_screen();
+            if ( $this->post_type == $screen->post_type ) {
+                foreach ( $this->meta_filters as $field => $options ) {
+                    if ( ! empty( $_GET[$field] ) ) {
+                        $query->query_vars['meta_key'] = $field;
+                        $query->query_vars['meta_value'] = $_GET[$field];
+                    }
+                }
+            }
 		}
 	}
 	
