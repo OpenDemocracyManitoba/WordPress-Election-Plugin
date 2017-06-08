@@ -342,7 +342,7 @@ SQL;
 
 					$clauses['groupby'] = "tr2.object_id";
 					$clauses['orderby']  = "GROUP_CONCAT(t2.name ORDER BY name ASC) ";
-					$clauses['orderby'] .= ( 'ASC' == strtoupper( $wp_query->get( 'order' ) ) ) ? 'ASC' : 'DESC';
+					$clauses['orderby'] .= ( 'DESC' == strtoupper( $wp_query->get( 'order' ) ) ) ? 'DESC' : 'ASC';
 				}
 			}
 		}

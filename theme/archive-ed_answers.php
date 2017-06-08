@@ -1,13 +1,22 @@
 <?php
 /**
- * The template for displaying 404 pages (Not Found).
+ * The template for displaying all single posts and attachments
  *
- * @package Election_Data_Theme
- * @since Election_Data_Theme 1.0
  */
- 
-get_header(); ?>
- 
+
+get_header(); 
+
+if ( current_user_can( 'edit_posts' ) ) : ?>
+<style>
+    td, th { padding: 5px; border: 1px solid black; }
+</style>
+<div id="primary">
+    <div id="content" role="main">
+		<?php display_party_answer_stats( ); ?>
+        <?php display_candidate_answer_stats(); ?>
+        </div>
+</div>
+<?php else: ?>
     <div id="primary" class="content-area">
         <div id="content" class="site-content" role="main">
  
@@ -26,5 +35,5 @@ get_header(); ?>
  
         </div><!-- #content .site-content -->
     </div><!-- #primary .content-area -->
- 
+<?php endif; ?>
 <?php get_footer(); ?>

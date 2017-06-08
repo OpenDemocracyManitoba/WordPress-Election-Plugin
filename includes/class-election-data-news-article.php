@@ -402,6 +402,12 @@ class Election_Data_News_Article {
 		$this->update_news_articles();
 		wp_die();
 	}
+    
+    public function ajax_scrub_news_articles()
+    {
+        $this->remove_bad_news_articles();
+        wp_die();
+    }
 		
 	/**
 	 * Updates the news articles
@@ -447,6 +453,35 @@ class Election_Data_News_Article {
 			update_post_meta( $article_id, 'moderation', 'approved' );
 		}
 	}
+    
+    public function remove_bad_news_articles( ) {
+        global $ed_post_types;
+        global $ed_taxonomies;
+        
+        set_time_limit( 0 );
+		$args = array(
+			'post_type' => $ed_post_types['news_article'],
+			'nopaging' => true,
+        );
+        $query = new WP_Query( $args );
+        while ( $query->have_posts() ) {
+            $query->the_post();
+            $summaries = get_post_meta( $query->post->ID, 'summaries', true );
+            foreach ( $summaries as $candidate_id => $summary ) {
+                $term = get_term( $candidate_id, $ed_taxonomies['news_article_candidate'] );
+                $tmp_name = str_replace( ' ', '|', $term->name );
+                $pattern = "/$tmp_name/i";
+                if ( preg_match($pattern, $summary ) == 0 ) {
+                    unset ( $summaries[$candidate_id] );
+                }
+            }
+            if ( count( $summaries ) > 0 ) {
+                update_post_meta( $query->post->ID, 'summaries', $summaries );
+            } else {
+                wp_delete_post( $query->post->ID, true );
+            }
+        }
+    }
 	
 	protected function process_news_articles( $candidate_name, $candidate_id, &$sources, $source_parents ) {
 		$mentions = $this->get_individual_news_articles( $candidate_name, Election_Data_Option::get_option( 'location' ) );
@@ -524,7 +559,8 @@ class Election_Data_News_Article {
 	 *
 	 */
 	protected function get_individual_news_articles( $candidate, $location='' ) {
-		$gnews_url = "http://news.google.ca/news?ned=ca&hl=en&as_drrb=q&as_qdr=a&scoring=r&output=rss&num=75&q=\"$candidate\"";
+        $url_candidate = urlencode($candidate);
+		$gnews_url = "http://news.google.ca/news?ned=ca&hl=en&as_drrb=q&as_qdr=a&scoring=r&output=rss&num=75&q=\"$url_candidate\"";
 
 		if ( $location ) {
 			$gnews_url .= "&geo=$location";
@@ -668,6 +704,7 @@ class Election_Data_News_Article {
 		add_filter( 'election_data_settings_validate_time', array( $this, 'validate_time' ), 10, 3 );
 		add_action( 'wp_ajax_election_data_scrape_news', array( $this, 'ajax_update_news_articles' ) );
 		add_filter( 'pre_get_posts', array( $this, 'set_main_query_parameters' ) );
+        add_action( 'wp_ajax_election_data_scrub_news', array( $this, 'ajax_scrub_news_articles' ) );
 	}	
 	
 	/**
