@@ -234,6 +234,16 @@ class Election_Data_Settings_Definition {
 					),
 					'no_value' => true,
 				),
+                'scrub' => array(
+                    'desc' => __( 'Remove articles that do not contain the candidate\'s name in the article', self::$plugin_name ),
+                    'type' => 'button',
+                    'options' => array(
+                        'id' => 'button_scrub_news',
+                        'label' => __( 'Remove News', self::$plugin_name ),
+                        'action' => 'election_data_scrub_news',
+                    ),
+                    'no_value' => true,
+                ),
 			),
 			'questions_tab' => array(
 				'answers' => array(
@@ -246,34 +256,64 @@ class Election_Data_Settings_Definition {
 					),
 					'no_value' => true,
 				),
-				'send-email' => array(
-					'desc' => __( 'Send questionnaire to Candidates/Parites.', self::$plugin_name ),
+				'send-all-email' => array(
+					'desc' => __( 'Send questionnaire to Candidates/Parties.', self::$plugin_name ),
 					'type' => 'button',
 					'options' => array(
-						'id' => 'button_send_email',
-						'label' => __( 'Send Emails', self::$plugin_name ),
-						'action' => 'election_data_send_email',
+						'id' => 'button_send_all_email',
+						'label' => __( 'Send All Emails', self::$plugin_name ),
+						'action' => 'election_data_send_all_email',
+					),
+					'no_value' => true,
+				),
+                'send-candidate-email' => array(
+                    'desc' => __( 'Send questionnaire to Candidates.', self::$plugin_name ),
+                    'type' => 'button',
+					'options' => array(
+						'id' => 'button_send_candidate_email',
+						'label' => __( 'Send Candidate Emails', self::$plugin_name ),
+						'action' => 'election_data_send_candidate_email',
+					),
+					'no_value' => true,
+				),
+                'send-party-email' => array(
+                    'desc' => __( 'Send questionnaire to Parties.', self::$plugin_name ),
+                    'type' => 'button',
+					'options' => array(
+						'id' => 'button_send_party_email',
+						'label' => __( 'Send Party Emails', self::$plugin_name ),
+						'action' => 'election_data_send_party_email',
 					),
 					'no_value' => true,
 				),
 				'reset-party-questionnaire' => array(
-					'desc' => __( 'Unset the sent questionnaire checkbox for all parties ', self::$plugin_name ),
+					'desc' => __( 'Unset the sent questionnaire checkbox for all parties.', self::$plugin_name ),
 					'type' => 'button',
 					'options' => array(
 						'id' => 'button_unset_party',
 						'label' => __( 'Reset Parties', self::$plugin_name ),
 						'action' => 'election_data_reset_party_questionnaire',
-						'message' => __( 'Are you sure you want to unset the questionnaire sent checkbox for all parties.  This means that e-mails will be resent to parties that have already been sent one.', self::$plugin_name ),
+						'message' => __( 'Are you sure you want to unset the questionnaire sent checkbox for all parties. This means that e-mails will be resent to parties that have already been sent one.', self::$plugin_name ),
 					),
 				),
 				'reset-candidate-questionnaire' => array(
-					'desc' => __( 'Unset the sent questionnaire checkbox for all candidates ', self::$plugin_name ),
+					'desc' => __( 'Unset the sent questionnaire checkbox for all candidates.', self::$plugin_name ),
 					'type' => 'button',
 					'options' => array(
 						'id' => 'button_unset_candidate',
 						'label' => __( 'Reset Candidates', self::$plugin_name ),
 						'action' => 'election_data_reset_candidate_questionnaire',
-						'message' => __( 'Are you sure you want to unset the questionnaire sent checkbox for all candidates.  This means that e-mails will be resent to candidates that have already been sent one.', self::$plugin_name ),
+						'message' => __( 'Are you sure you want to unset the questionnaire sent checkbox for all candidates. This means that e-mails will be resent to candidates that have already been sent one.', self::$plugin_name ),
+					),
+				),
+                'reset-unanswered-questionnaire' => array(
+					'desc' => __( 'Unset the sent questionnaire checkbox for all candidates and parties that have not responded.', self::$plugin_name ),
+					'type' => 'button',
+					'options' => array(
+						'id' => 'button_unset_unanswered',
+						'label' => __( 'Reset Questionnaire', self::$plugin_name ),
+						'action' => 'election_data_reset_questionnaire_unanswered',
+						'message' => __( 'Are you sure you want to unset the questionnaire sent checkbox. This means that e-mails will be resent to candidates and parties that have already been sent one.', self::$plugin_name ),
 					),
 				),
 				'smtp-server' => array(

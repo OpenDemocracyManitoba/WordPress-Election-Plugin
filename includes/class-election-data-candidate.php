@@ -189,6 +189,14 @@ class Election_Data_Candidate {
 						'std' => '',
 						'imported' => false,
 					),
+					'qanda_email' => array(
+						'label' => __( 'Q and A Email Address.' ),
+						'id' => 'qanda_email',
+						'desc' => __( "Enter the candidate's private email address to be used for Q and A only. If it is not defined, the candidate's email address will be used for Q and A." ),
+						'type' => 'email',
+						'std' => '',
+						'imported' => true,
+					),
 					'qanda_token' => array(
 						'id' => 'qanda_token',
 						'type' => 'text_with_load_value_button',
@@ -337,6 +345,14 @@ class Election_Data_Candidate {
 							'imported' => true,
 						),
 						array(
+							'type' => 'qanda_email',
+							'id' => 'email',
+							'desc' => __( "Enter the party's private email address to be used for Q and A only. If it is not defined, the party's e-mail address will be used for Q and A." ),
+							'label' => __( 'Q and A Email Address' ),
+							'std' => '',
+							'imported' => true,
+						),
+						array(
 							'id' => 'qanda_token',
 							'type' => 'text_with_load_value_button',
 							'std_callback' => array( $this, 'qanda_random_token' ),
@@ -415,7 +431,7 @@ class Election_Data_Candidate {
 		add_image_size( 'party', 175, 175, false );
 	}
 	
-	public function qanda_random_token() {
+	public static function qanda_random_token() {
 		return wp_generate_password( 30, false );
 	}
 	

@@ -101,9 +101,9 @@ class Election_Data_Answer {
 				//'menu_icon' => plugins_url( 'images/candidate.png', dirname( __FILE__ ) ), //TODO: Create a candidate image,
 				'supports' => array( 'title', 'editor', 'revisions' ),
 				'taxonomies' => array( '' ),
-				'has_archive' => false,
+				'has_archive' => true,
 				'query_var' => false,
-				'rewrite' => false,
+				'rewrite' => array( 'slug' => __( 'answers' ), 'with_front' => false ),
 				'capability_type' => 'post',
 				'capabilities' => array(
 					'create_posts' => false,
@@ -151,7 +151,7 @@ class Election_Data_Answer {
 						'parent_item' => null,
 						'parent_item_colon' => null,
 					),
-					'public' => false,
+					'public' => true,
 					'show_tagcloud' => false,
 					'show_admin_column' => true,
 					'hierarchical' => true,
@@ -172,7 +172,7 @@ class Election_Data_Answer {
 						'parent_item' => null,
 						'parent_item_colon' => null,
 					),
-					'public' => false,
+					'public' => true,
 					'show_tagcloud' => false,
 					'show_admin_column' => true,
 					'hierarchical' => true,
@@ -443,9 +443,12 @@ class Election_Data_Answer {
 	{
 		add_filter( 'query_vars', array( $this, 'add_query_vars_filter' ) );
 		add_action( 'wp_ajax_election_data_create_answers', array( $this, 'ajax_create_answers' ) );
-		add_action( 'wp_ajax_election_data_send_email', array( $this, 'ajax_send_email' ) );
+		add_action( 'wp_ajax_election_data_send_all_email', array( $this, 'ajax_send_all_email' ) );
+        add_action( 'wp_ajax_election_data_send_candidate_email', array( $this, 'ajax_send_candidate_email' ) );
+        add_action( 'wp_ajax_election_data_send_party_email', array( $this, 'ajax_send_party_email' ) );
 		add_action( 'wp_ajax_election_data_reset_party_questionnaire', array( $this, 'ajax_reset_party_questionnaire' ) );
 		add_action( 'wp_ajax_election_data_reset_candidate_questionnaire', array( $this, 'ajax_reset_candidate_questionnaire' ) );
+        add_action( 'wp_ajax_election_data_reset_questionnaire_unanswered', array( $this, 'ajax_reset_questionnaire_unanswered' ) );
 	}	
 
 	
@@ -649,6 +652,10 @@ class Election_Data_Answer {
 				$party_id = get_tax_meta( $term->term_id, 'candidate_party_term_id' );
 				$party = get_term( $party_id, $ed_taxonomies['candidate_party'] );
 				$token = get_tax_meta( $party_id, 'qanda_token' );
+                if ( empty( $token ) ) {
+                   $token = Election_Data_Candidate::qanda_random_token();
+                   update_tax_meta( $party_id, 'qanda_token', $token );
+                }
 				break;
 			case 'candidate':
 				$candidate_id = get_tax_meta( $term->term_id, 'candidate_id' );
@@ -657,11 +664,15 @@ class Election_Data_Answer {
 				$parties = get_the_terms( $candidate, $ed_taxonomies['candidate_party'] );
 				$party = $parties[0];
 				$token = get_post_meta( $candidate_id, 'qanda_token', true );
+                if ( empty( $token ) ) {
+                   $token = Election_Data_Candidate::qanda_random_token();
+                   update_post_meta( $candidate_id, 'qanda_token', $token );
+                }
 				break;
 		}
 
 		$url = get_term_link( $term, $this->taxonomies[$type] );
-		$replacements['question_url'] = "<a href='$url?token=$token'>$url</a>";
+		$replacements['question_url'] = "<a href='$url?token=$token'>$url?token=$token</a>";
 		$replacements['party'] = $party->name;
 		$replacements['party_alt'] = $party->description;
 		$replacements['question'] = implode( get_qanda_questions( $type, $term ) );
@@ -683,7 +694,11 @@ class Election_Data_Answer {
 		$answer_party_ids = get_terms( $this->taxonomies['party'], $args );
 		foreach ( $answer_party_ids as $answer_party_id ) {
 			$party_id = get_tax_meta( $answer_party_id, 'candidate_party_term_id' );
-			if ( get_tax_meta( $party_id, 'qanda_sent' ) ) {
+            $email_address = get_tax_meta( $party_id, 'qanda_email' );
+            if ( empty( $email_address ) ) {
+                $email_address = get_tax_meta( $party_id, 'email' );
+            }
+			if ( get_tax_meta( $party_id, 'qanda_sent' ) || empty( $email_address ) ) {
 				continue;
 			}
 			
@@ -693,7 +708,7 @@ class Election_Data_Answer {
 			$replacement = $replacements['replacement'];
 			$message = array(
 				'subject' => preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'subject-party' ) ),
-				'recipient' => get_tax_meta( $party_id, 'email' ),
+				'recipient' => $email_address,
 				'recipient-name' => '',
 				'body' => '<html><head></head><body>' . preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'email-party' ) ) . '</body></html>',
 			);
@@ -709,7 +724,11 @@ class Election_Data_Answer {
 		$answer_candidate_ids = get_terms( $this->taxonomies['candidate'], $args );
 		foreach ( $answer_candidate_ids as $answer_candidate_id ) {
 			$candidate_id = get_tax_meta( $answer_candidate_id, 'candidate_id' );
-			if ( get_post_meta( $candidate_id, 'qanda_sent', true ) ) {
+            $email_address = get_post_meta( $candidate_id, 'qanda_email', true );
+            if ( empty( $email_address ) ) {
+                $email_address = get_post_meta( $candidate_id, 'email', true );
+            }
+			if ( get_post_meta( $candidate_id, 'qanda_sent', true ) || empty( $email_address ) ) {
 				continue;
 			}
 			
@@ -719,7 +738,7 @@ class Election_Data_Answer {
 			$replacement = $replacements['replacement'];
 			$message = array(
 				'subject' => preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'subject-candidate' ) ),
-				'recipient' => get_post_meta( $candidate_id, 'email', true ),
+				'recipient' => $email_address,
 				'recipient-name' => get_the_title( $candidate ),
 				'body' => '<html><head></head><body>' . preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'email-candidate' ) ) . '</body></html>',
 			);
@@ -728,17 +747,23 @@ class Election_Data_Answer {
 		}
 	}
 	
-	public function email_all_questions() {
+	public function ajax_send_all_email() {
 		$this->email_candidate_questions();
 		$this->email_party_questions();
-	}
-	
-	public function ajax_send_email() {
-		$this->email_all_questions();
 		wp_die();
 	}
-	
-	public function reset_party_questionnaire() {
+    
+    public function ajax_send_candidate_email() {
+        $this->email_candidate_questions();
+        wp_die();
+    }
+    
+    public function ajax_send_party_email() {
+        $this->email_party_questions();
+        wp_die();
+    }
+    
+	public function reset_party_questionnaire( $only_unanswered = false ) {
 		global $ed_taxonomies;
 		global $ed_post_types;
 		$args = array(
@@ -746,12 +771,21 @@ class Election_Data_Answer {
 			'fields' => 'ids',
 		);
 		$term_ids = get_terms( $ed_taxonomies['candidate_party'], $args );
-		foreach ( $term_ids as $term_id ) {
-			update_tax_meta( $term_id, 'qanda_sent', false );
-		}
+        if ( $only_unanswered ) { 
+            foreach ( $term_ids as $term_id ) {
+                $answers = get_qanda_answers( 'party', $term_id );
+                if ( count ( $answers ) == 0 ) {
+                    update_tax_meta( $term_id, 'qanda_sent', false );
+                }
+            }
+        } else {
+            foreach ( $term_ids as $term_id ) {
+                update_tax_meta( $term_id, 'qanda_sent', false );
+            }
+        }
 	}
 
-	public function reset_candidate_questionnaire() {
+	public function reset_candidate_questionnaire( $only_unanswered = false ) {
 		global $ed_taxonomies;
 		global $ed_post_types;
 		$args = array(
@@ -759,10 +793,20 @@ class Election_Data_Answer {
 			'nopaging' => true,
 		);
 		$query = new WP_Query( $args );
-		while ( $query-> have_posts() ) {
-			$query->the_post();
-			update_post_meta( $query->post->ID, 'qanda_sent', false );
-		}
+        if ( $only_unanswered ) {
+            while ( $query->have_posts() ) {
+                $query->the_post();
+                $answers = get_qanda_answers( 'candidate', $query->post->ID );
+                if ( count( $answers ) == 0 ) {
+                    update_post_meta( $query->post->ID, 'qanda_sent', false );
+                }
+            }
+        } else {
+            while ( $query->have_posts() ) {
+                $query->the_post();
+                update_post_meta( $query->post->ID, 'qanda_sent', false );
+            }
+        }
 	}
 
 	
@@ -775,6 +819,12 @@ class Election_Data_Answer {
 		$this->reset_candidate_questionnaire();
 		wp_die();
 	}
+    
+    public function ajax_reset_questionnaire_unanswered() {
+        $this->reset_party_questionnaire( true );
+        $this->reset_candidate_questionnaire( true );
+        wp_die();
+    }
 	
 	/**
 	 * Erases all candidates, parties and constituencies from the database.

@@ -1,9 +1,14 @@
 <?php 
 global $ed_taxonomies;
-if ( 'POST' == $_SERVER['REQUEST_METHOD'] && ! empty( $_POST['party_id'] ) ) {
-	$answer_party_id = $_POST['party_id'];
-	if ( can_edit_answers( 'party', $answer_party_id ) && wp_verify_nonce( $_POST['update_party_qanda_nonce'], "update_party_qanda_$answer_party_id" ) ) {
-		$questions = get_qanda_questions( 'party', get_term( $answer_party_id, $ed_taxonomies['answer_party'] ) );
+$answer_party = get_queried_object();
+$party = get_candidate_party_from_answer_party( $answer_party );
+$party_id = $party['id'];
+$can_edit = can_edit_answers( 'party', $party_id );
+$questions = get_qanda_questions( 'party', get_queried_object() );
+
+if ( 'POST' == $_SERVER['REQUEST_METHOD'] ) {
+    $nonce_verified = wp_verify_nonce( $_POST['update_party_qanda_nonce'], "update_party_qanda_{$answer_party->term_id}" );
+	if ( $can_edit && $nonce_verified ) {
 		foreach ( $questions as $answer_id => $question ) {
 			$answer = array(
 				'ID' => $answer_id,
@@ -11,19 +16,14 @@ if ( 'POST' == $_SERVER['REQUEST_METHOD'] && ! empty( $_POST['party_id'] ) ) {
 			);
 			wp_update_post( $answer );
 		}
+        $party = get_candidate_party_from_answer_party( $answer_party );
+        $questions = get_qanda_questions( 'party', get_queried_object() );
 	} else {
 		wp_die( "Unauthorized access" );
 	}
 }
 
-
-$answer_party = get_queried_object();
-$party = get_candidate_party_from_answer_party( $answer_party );
-$party_id = $party['id'];
-
 $has_qanda = count( $party['answers'] ) > 0;
-$show_edit = can_edit_answers( 'party', $party_id );
-$questions = get_qanda_questions( 'party', get_queried_object() );
 
 get_header(); ?>
 <h2 class="title"><?php echo $party['long_title']; ?></h2>
@@ -35,7 +35,7 @@ get_header(); ?>
 			</div>
 		</div>
 	</div>
-	<?php if ( $show_edit && ! empty( $questions ) ) : ?>
+	<?php if ( $can_edit && ! empty( $questions ) ) : ?>
 		<div class="three_columns q">
 			<h2>Questionnaire</h2>
 			<p>Please enter your responses for the questions listed below. Questions that do not have a response will not be displayed on the site.<p>

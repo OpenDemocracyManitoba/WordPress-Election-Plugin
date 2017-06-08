@@ -166,7 +166,44 @@ function get_parties_random() {
 	$terms = get_terms( $ed_taxonomies['candidate_party'] , $args );
 	shuffle( $terms );
 	return $terms;
-}	
+}
+
+function get_all_parties() {
+    global $ed_taxonomies;
+    $args = array(
+        'orderby' => 'name',
+        'order' => 'ASC',
+        'hide_empty' => false,
+   );
+   
+    $terms = get_terms( $ed_taxonomies['candidate_party'], $args );
+    $parties = array();
+    foreach ( $terms as $term ) {
+        $parties[] = get_party( $term );
+    }
+    
+    return $parties;
+}
+
+function get_all_candidates() {
+    global $ed_post_types;
+    $query_args = array(
+        'post_type' => $ed_post_types['candidate'],
+        'nopaging' => true,
+        'orderby' => 'title',
+        'order' => 'ASC',
+    );
+    
+    $candidates = array();
+    $query = new WP_Query( $query_args );
+    while ( $query->have_posts() ) {
+        $query->the_post();
+        
+        $candidates[$query->post->ID] = get_candidate( $query->post->ID, true );
+    }
+    
+    return $candidates;
+}
 
 function get_party( $party, $get_extra_data = true ) {
 	global $ed_taxonomies;
@@ -248,7 +285,7 @@ function get_candidate_party_from_answer_party( $answer_party ) {
 
 function get_candidate_from_answer_candidate( $answer_candidate ) {
 	$candidate_id = get_tax_meta( $answer_candidate->term_id, 'candidate_id' );
-	return get_candidate( $candidate_id );
+	return get_candidate( $candidate_id, true );
 }
 
 function get_news_article( $news_article_id ) {
@@ -294,7 +331,9 @@ function get_qanda_questions( $type, $term ) {
 	$query_args = array(
 		'post_type' => $ed_post_types['answer'],
 		'nopaging' => true,
-		'post_status' => 'publish'
+		'post_status' => 'publish',
+        'orderby' => "taxonomy-{$ed_taxonomies['answer_question']}",
+		'order' => 'ASC',
 	);
 	switch ( $type ) {
 		case 'party':
@@ -345,7 +384,9 @@ function get_qanda_answers( $type, $id, $count = null ) {
 	global $ed_taxonomies;
 	$query_args = array(
 		'post_type' => $ed_post_types['answer'],
-		'post_status' => 'publish'
+		'post_status' => 'publish',
+        'orderby' => "taxonomy-{$ed_taxonomies['answer_question']}",
+		'order' => 'ASC',
 	);
 	if ( isset ( $count ) ) {
 		$query_args['posts_per_page'] = $count;
@@ -556,6 +597,6 @@ function can_edit_answers( $type, $id ) {
 			$token = get_post_meta( $id, 'qanda_token', true );
 			break;
 	}
-
+    
 	return current_user_can( 'edit_posts' ) || get_query_var( 'token' ) == $token && ! empty( $token );
 }

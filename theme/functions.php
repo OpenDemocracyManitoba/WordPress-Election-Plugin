@@ -376,3 +376,47 @@ function display_constituency_candidates( $candidate_query, $constituency, &$can
 		display_candidate( $candidate, $constituency, $party, array( 'name', 'party', 'news' ), 'name' );
 	}
 }
+
+function display_party_answer_stats() {
+    $parties = get_all_parties();
+    echo "<div>Parties:</div>";
+    echo "<div><table><tr><th>Party</th><th>Answered</th></tr>";
+    $total = 0;
+    foreach ( $parties as $party ) {
+        $answer_count = count( $party['answers'] );
+        if ( $answer_count > 0 ) {
+            $total += 1;
+            echo "<tr><td>{$party['name']}</td><td>$answer_count</td></tr>";
+        }
+    }
+    echo "</table></div>";
+    echo "<div>Number of parties that responded: $total</div>";
+}
+
+function display_candidate_answer_stats() {
+    $candidates = get_all_candidates();
+    echo "<div>Candidates:</div>";
+    echo "<div><table><tr><th>Party</th><th>Candidate</th><th>Answered</th></tr>";
+    $totals = array();
+    $total = 0;
+    foreach ( $candidates as $candidate_id => $candidate ) {
+        $answer_count = count( $candidate['answers'] );
+        if ( $answer_count > 0 ) {
+            $party = get_party_from_candidate( $candidate_id );
+            if ( array_key_exists( $party['name'], $totals ) ) {
+                $totals[$party['name']] += 1;
+            } else {
+                $totals[$party['name']] = 1;
+            }
+            $total += 1;
+            echo "<tr><td>{$party['name']}</td><td>{$candidate['name']}</td><td>$answer_count</td></tr>";
+        }
+    }
+    echo "</table></div>";
+    echo "<div>Responses by Party:</div><div><table><tr><th>Party</th><th>Responded</th></tr>";
+    foreach ( $totals as $party => $count ) {
+        echo "<tr><td>$party</td><td>$count</td></tr>";
+    }
+    echo "</table></div>";
+    echo "<div>Number of candidates that responded: $total</div>";
+}
