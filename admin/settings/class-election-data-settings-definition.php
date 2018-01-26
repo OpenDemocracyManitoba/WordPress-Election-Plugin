@@ -311,7 +311,7 @@ class Election_Data_Settings_Definition {
 					'type' => 'button',
 					'options' => array(
 						'id' => 'button_unset_unanswered',
-						'label' => __( 'Reset Questionnaire', self::$plugin_name ),
+						'label' => __( 'Reset Unanswered Questionnaires', self::$plugin_name ),
 						'action' => 'election_data_reset_questionnaire_unanswered',
 						'message' => __( 'Are you sure you want to unset the questionnaire sent checkbox. This means that e-mails will be resent to candidates and parties that have already been sent one.', self::$plugin_name ),
 					),
@@ -347,6 +347,16 @@ class Election_Data_Settings_Definition {
 					'desc' => __( 'Password for the SMTP server', self::$plugin_name ),
 					'type' => 'password',
 				),
+				'email-delay' => array(
+					'name' => __( 'Email delay (in milliseconds)', self::$plugin_name ),
+					'desc' => __( 'Allows you to throttle for certain email services, leave blank for none', self::$plugin_name ),
+					'type' => 'text',
+				),
+				'email-limit' => array(
+					'name' => __( 'Batch limit for emails', self::$plugin_name ),
+					'desc' => __( 'Will stop sending emails after limit reached, leave blank for none', self::$plugin_name ),
+					'type' => 'text',
+				),
 				'from-email-address' => array(
 					'name' => __( 'From Email Address', self::$plugin_name ),
 					'desc' => __( 'The email address to be used when sending emails.', self::$plugin_name ),
@@ -355,6 +365,11 @@ class Election_Data_Settings_Definition {
 				'from-email-name' => array(
 					'name' => __( 'From Name', self::$plugin_name ),
 					'desc' => __( 'The name to use in the from field of the email.', self::$plugin_name ),
+					'type' => 'text',
+				),
+				'reply-to' => array(
+					'name' => __( 'Optional Reply To', self::$plugin_name ),
+					'desc' => __( 'If set, replying to email will go to this email address.', self::$plugin_name ),
 					'type' => 'text',
 				),
 				'subject-candidate' => array(

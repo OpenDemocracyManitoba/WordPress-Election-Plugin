@@ -600,3 +600,38 @@ function can_edit_answers( $type, $id ) {
     
 	return current_user_can( 'edit_posts' ) || get_query_var( 'token' ) == $token && ! empty( $token );
 }
+
+function get_source_count() {
+    global $ed_taxonomies;
+    global $ed_post_types;
+    $sources = array();
+    $terms = get_terms( $ed_taxonomies['news_article_source'], array( 'childless' => true ) );
+    foreach ( $terms as $term ) {
+        $args = array( 
+            'post_type' => $ed_post_types['news_article'],
+            'tax_query' => array (
+                array (
+                    'taxonomy' => $ed_taxonomies['news_article_source'],
+                    'field' => 'term_id',
+                    'terms' => $term->term_id,
+                ),
+            ),
+            'meta_query' => array (
+                array (
+                    'key' => 'moderation',
+                ),
+            ),
+            'nopaging' => true,
+        );
+
+        $sources[$term->name] = array();
+        foreach ( array( 'approved', 'new', 'rejected' ) as $moderation ) {
+            $args['meta_query'][0]['value'] = $moderation;
+            $query = new WP_Query( $args );
+            $sources[$term->name][] = $query->post_count;
+        }
+    }
+    
+    arsort( $sources );
+    return $sources;
+}
