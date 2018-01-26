@@ -155,7 +155,7 @@ class Election_Data_News_Article {
 					'moderation' => array(
 						'label' => __( 'Moderated' ),
 						'id' => 'moderation',
-						'desc' => __( 'Whether the article is to be displayed in the news sections ore not.' ),
+						'desc' => __( 'Whether the article is to be displayed in the news sections or not.' ),
 						'type' => 'pulldown',
 						'std' => 'new',
 						'imported' => true,
@@ -472,12 +472,14 @@ class Election_Data_News_Article {
                 $tmp_name = str_replace( ' ', '|', $term->name );
                 $pattern = "/$tmp_name/i";
                 if ( preg_match($pattern, $summary ) == 0 ) {
+                    error_log( "{$term->name} not found in '$summary'" );
                     unset ( $summaries[$candidate_id] );
                 }
             }
             if ( count( $summaries ) > 0 ) {
                 update_post_meta( $query->post->ID, 'summaries', $summaries );
             } else {
+                error_log( "deleting article {$query->post->post_title}" );
                 wp_delete_post( $query->post->ID, true );
             }
         }

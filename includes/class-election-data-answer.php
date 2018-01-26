@@ -65,6 +65,16 @@ class Election_Data_Answer {
 	public $post_type;
 
 	/**
+	 * Keeps track of emails that have been sent.
+	 *
+	 * @var integer
+	 * @access private
+	 * @since 1.0
+	 *
+	 */
+	private $emails_sent = 0;
+
+	/**
 	 * Constructor
 	 *
 	 * @access public
@@ -443,7 +453,7 @@ class Election_Data_Answer {
 	{
 		add_filter( 'query_vars', array( $this, 'add_query_vars_filter' ) );
 		add_action( 'wp_ajax_election_data_create_answers', array( $this, 'ajax_create_answers' ) );
-		add_action( 'wp_ajax_election_data_send_all_email', array( $this, 'ajax_send_all_email' ) );
+		add_action( 'wp_ajax_election_data_send_email', array( $this, 'ajax_send_all_email' ) );
         add_action( 'wp_ajax_election_data_send_candidate_email', array( $this, 'ajax_send_candidate_email' ) );
         add_action( 'wp_ajax_election_data_send_party_email', array( $this, 'ajax_send_party_email' ) );
 		add_action( 'wp_ajax_election_data_reset_party_questionnaire', array( $this, 'ajax_reset_party_questionnaire' ) );
@@ -633,6 +643,9 @@ class Election_Data_Answer {
 			$mail->SMTPAuth = false;
 		}
 		$mail->SMTPSecure = Election_Data_Option::get_option( 'smtp-encryption' );
+		if ( !empty( Election_Data_Option::get_option( 'reply-to' ) ) ) {
+			$mail->AddReplyTo( Election_Data_Option::get_option( 'reply-to' ) );
+		}
 		$mail->SetFrom(Election_Data_Option::get_option( 'from-email-address' ), Election_Data_Option::get_option( 'from-email-name' ) );
 		$mail->Subject = $message_contents['subject'];
 		$mail->Body = $message_contents['body'];
@@ -641,6 +654,7 @@ class Election_Data_Answer {
 		$mail->isHTML = true;
 		$mail->AddAddress( $message_contents['recipient'], $message_contents['recipient-name'] );
 		$mail->Send();
+		$this->emails_sent++;
 	}
 	
 	public function get_pattern_replacements( $type, $term ) {
@@ -688,17 +702,19 @@ class Election_Data_Answer {
 		
 	public function email_party_questions() {
 		global $ed_taxonomies;
+		$email_limit = intval( Election_Data_Option::get_option( 'email-limit' ) );
+		$email_delay = intval( Election_Data_Option::get_option( 'email-delay' ) ) * 1000;
+
 		$args = array(
 			'fields' => 'ids',
 		);
 		$answer_party_ids = get_terms( $this->taxonomies['party'], $args );
 		foreach ( $answer_party_ids as $answer_party_id ) {
+			if ( ( $email_limit > 0 ) && ( $this->emails_sent >= $email_limit ) ) {
+				break;
+			}
 			$party_id = get_tax_meta( $answer_party_id, 'candidate_party_term_id' );
-            $email_address = get_tax_meta( $party_id, 'qanda_email' );
-            if ( empty( $email_address ) ) {
-                $email_address = get_tax_meta( $party_id, 'email' );
-            }
-			if ( get_tax_meta( $party_id, 'qanda_sent' ) || empty( $email_address ) ) {
+			if ( get_tax_meta( $party_id, 'qanda_sent' ) ) {
 				continue;
 			}
 			
@@ -708,27 +724,41 @@ class Election_Data_Answer {
 			$replacement = $replacements['replacement'];
 			$message = array(
 				'subject' => preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'subject-party' ) ),
-				'recipient' => $email_address,
+				'recipient' => get_tax_meta( $party_id, 'email' ),
 				'recipient-name' => '',
 				'body' => '<html><head></head><body>' . preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'email-party' ) ) . '</body></html>',
 			);
 			$this->send_email( $message );
 			update_tax_meta( $party_id, 'qanda_sent', true );
+			if ( $email_delay > 0 ) {
+				usleep( $email_delay );
+			}
 		}
 	}
 	
 	public function email_candidate_questions() {
+		$email_limit = intval( Election_Data_Option::get_option( 'email-limit' ) );
+		$email_delay = intval( Election_Data_Option::get_option( 'email-delay' ) ) * 1000;
+
 		$args = array(
 			'fields' => 'ids',
 		);
 		$answer_candidate_ids = get_terms( $this->taxonomies['candidate'], $args );
 		foreach ( $answer_candidate_ids as $answer_candidate_id ) {
+			if ( ( $email_limit > 0 ) && ( $this->emails_sent >= $email_limit ) ) {
+				break;
+			}
 			$candidate_id = get_tax_meta( $answer_candidate_id, 'candidate_id' );
-            $email_address = get_post_meta( $candidate_id, 'qanda_email', true );
-            if ( empty( $email_address ) ) {
-                $email_address = get_post_meta( $candidate_id, 'email', true );
-            }
-			if ( get_post_meta( $candidate_id, 'qanda_sent', true ) || empty( $email_address ) ) {
+
+			$email = get_post_meta( $candidate_id, 'contact_email', true );
+			if (empty( $email )) {
+				$email = get_post_meta( $candidate_id, 'email', true );
+			}
+			if (empty( $email )) {
+				continue;
+			}
+
+			if ( get_post_meta( $candidate_id, 'qanda_sent', true ) ) {
 				continue;
 			}
 			
@@ -738,12 +768,15 @@ class Election_Data_Answer {
 			$replacement = $replacements['replacement'];
 			$message = array(
 				'subject' => preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'subject-candidate' ) ),
-				'recipient' => $email_address,
+				'recipient' => $email,
 				'recipient-name' => get_the_title( $candidate ),
 				'body' => '<html><head></head><body>' . preg_replace( $pattern, $replacement, Election_Data_Option::get_option( 'email-candidate' ) ) . '</body></html>',
 			);
 			$this->send_email( $message );
 			update_post_meta( $candidate_id, 'qanda_sent', true );
+			if ( $email_delay > 0 ) {
+				usleep( $email_delay );
+			}
 		}
 	}
 	
